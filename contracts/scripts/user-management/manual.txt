@@ -1,0 +1,31 @@
+npx hardhat run scripts/user-management/create-single-user.js --network besu -- \
+  --userId "alice_001" \
+  --name "Alice Johnson" \
+  --organization "FCI" \
+  --role "operator" \
+  --balance 250
+
+
+
+  # 1. Crear archivo user-data/new-users.json
+cat > user-data/new-users.json << 'EOF'
+[
+  {
+    "userId": "alice_001",
+    "name": "Alice Johnson",
+    "organization": "FCI",
+    "role": "operator",
+    "initialBalance": 250
+  },
+  {
+    "userId": "bob_002",
+    "name": "Bob Smith",
+    "organization": "Sunwest",
+    "role": "operator",
+    "initialBalance": 300
+  }
+]
+EOF
+
+# 2. Ejecutar
+npx hardhat run scripts/user-management/create-multiple-users.js --network besu

@@ -1,0 +1,61 @@
+# Configuración para Nodo RPC 1 de FCI
+# Rol: API principal para aplicaciones FCI (no valida bloques)
+
+data-path="data"
+genesis-file="../genesis.json"
+profile="ENTERPRISE"
+
+# Configuración P2P
+p2p-enabled=true
+p2p-host="0.0.0.0"
+p2p-port=30306
+max-peers=25
+
+# Bootnodes
+bootnodes=["enode://a147e4a0d66b0220a1a1c03a282d20e86cad12c41ba45a19424c9bb72a31c441bb2b3c64f6f2fb6fd38a51ea1480cb5f3e7d60e2004e87898d18679516577064@127.0.0.1:30303"]
+
+# Discovery
+discovery-enabled=true
+
+# RPC HTTP (principal para aplicaciones externas)
+rpc-http-enabled=true
+rpc-http-host="0.0.0.0"
+rpc-http-port=8547
+rpc-http-api=["ETH","NET","WEB3","TXPOOL","TRACE"]
+rpc-http-cors-origins=["*"]
+rpc-http-max-active-connections=80
+
+# RPC WebSocket (para suscripciones en tiempo real)
+rpc-ws-enabled=true
+rpc-ws-host="0.0.0.0"
+rpc-ws-port=8548
+rpc-ws-api=["ETH","NET","WEB3"]
+rpc-ws-max-active-connections=80
+
+# Logging
+logging="INFO"
+
+# Host allowlist
+host-allowlist=["*"]
+
+# Métricas
+metrics-enabled=true
+metrics-host="0.0.0.0"
+metrics-port=9548
+
+# NO minería (no es validador)
+miner-enabled=false
+
+# Sync mode
+sync-mode="FULL"
+
+# Network ID
+network-id=12345
+
+
+
+# Gas price
+min-gas-price=0
+
+# API adicionales para trazabilidad
+revert-reason-enabled=true

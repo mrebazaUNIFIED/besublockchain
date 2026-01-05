@@ -1,0 +1,36 @@
+{
+  "config" : {
+    "chainId" : 12345,
+    "berlinBlock" : 0,
+    "qbft" : {
+      "blockperiodseconds" : 5,
+      "epochlength" : 30000,
+      "requesttimeoutseconds" : 10
+    }
+  },
+  "nonce" : "0x0",
+  "timestamp" : "0x58ee40ba",
+  "gasLimit" : "0x47b760",
+  "difficulty" : "0x1",
+  "mixHash" : "0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365",
+  "coinbase" : "0x0000000000000000000000000000000000000000",
+  "alloc" : {
+    "fe3b557e8fb62b89f4916b721be55ceb828dbd73" : {
+      "comment" : "FCI Deployer Account",
+      "balance" : "0x200000000000000000000000000000000000000000000000000000000000000"
+    },
+    "627306090abaB3A6e1400e9345bC60c78a8BEf57" : {
+      "comment" : "FCI Secondary Account",
+      "balance" : "0x200000000000000000000000000000000000000000000000000000000000000"
+    },
+    "f17f52151EbEF6C7334FAD080c5704D77216b732" : {
+      "comment" : "Sunwest Deployer Account",
+      "balance" : "0x200000000000000000000000000000000000000000000000000000000000000"
+    },
+    "C5fdf4076b8F3A5357c5E395ab970B5B54098Fef" : {
+      "comment" : "Sunwest Secondary Account",
+      "balance" : "0x200000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "extraData" : "0xf87aa00000000000000000000000000000000000000000000000000000000000000000f8549424b315657fd06d20579b281192742368619c6daf94c840bed2c7cdb5e0e6d5869f9c75f33734db029694ccf2f6f77a94ec0992b3335b13c34412a7df988494646b9b8fe20d99eea6e3fe652918276f2df19351c080c0"
+}

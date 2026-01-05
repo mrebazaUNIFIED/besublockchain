@@ -1,0 +1,13 @@
+{
+  "network": "besu",
+  "chainId": 12345,
+  "deployer": "0xFE3B557E8Fb62b89F4916B721be55cEb828dBd73",
+  "timestamp": "2026-01-05T20:47:13.081Z",
+  "contracts": {
+    "UserRegistry": "0xa50a51c09a5c451C52BB714527E1974b686D8e77",
+    "USFCI": "0x9a3DBCa554e9f6b9257aAa24010DA8377C57c17e",
+    "LoanRegistry": "0x9B8397f1B0FEcD3a1a40CdD5E8221Fa461898517",
+    "ShareLoans": "0x2E1f232a9439C3D459FcEca0BeEf13acc8259Dd8",
+    "Portfolio": "0x05d91B9031A655d08E654177336d08543ac4B711"
+  }
+}

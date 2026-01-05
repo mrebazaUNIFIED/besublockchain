@@ -1,0 +1,53 @@
+# Configuración para Validador 2 de Sunwest
+# Rol: Valida bloques en consenso QBFT
+
+data-path="data"
+genesis-file="../genesis.json"
+profile="ENTERPRISE"
+
+# Configuración P2P
+p2p-enabled=true
+p2p-host="0.0.0.0"
+p2p-port=30309
+max-peers=25
+
+# Bootnodes
+bootnodes=["enode://a147e4a0d66b0220a1a1c03a282d20e86cad12c41ba45a19424c9bb72a31c441bb2b3c64f6f2fb6fd38a51ea1480cb5f3e7d60e2004e87898d18679516577064@127.0.0.1:30303"]
+
+# Discovery
+discovery-enabled=true
+
+# RPC HTTP (interno)
+rpc-http-enabled=true
+rpc-http-host="127.0.0.1"
+rpc-http-port=8555
+rpc-http-api=["ETH","NET","WEB3","ADMIN","QBFT","TXPOOL"]
+rpc-http-cors-origins=["*"]
+
+# RPC WebSocket
+rpc-ws-enabled=false
+
+# Logging
+logging="INFO"
+
+# Host allowlist
+host-allowlist=["localhost","127.0.0.1"]
+
+# Métricas
+metrics-enabled=true
+metrics-host="0.0.0.0"
+metrics-port=9551
+
+# Minería habilitada (es validador)
+miner-enabled=true
+miner-coinbase="0x0000000000000000000000000000000000000000"
+
+# Sync mode
+sync-mode="FULL"
+
+# Network ID
+network-id=12345
+
+# Gas price
+min-gas-price=0
+
