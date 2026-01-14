@@ -38,7 +38,7 @@ async function main() {
     await kycTx.wait();
     console.log("   ✅ KYC approved");
 
-    if (user.userId === "sunwest_001") {
+    if (user.userId === "a1b2c3d4-e5f6-4789-1011-121314151617") {
       console.log("   🔑 Granting special roles to Sunwest...");
       
       const MINTER_ROLE = await usfci.MINTER_ROLE();

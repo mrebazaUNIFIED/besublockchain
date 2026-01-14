@@ -1,0 +1,63 @@
+# Configuración para Validador 1 de FCI
+# Rol: Valida bloques en consenso QBFT
+
+data-path="data"
+genesis-file="../../genesis.json"
+profile="ENTERPRISE"
+
+# Configuración P2P
+p2p-enabled=true
+p2p-host="0.0.0.0"
+p2p-port=30304
+max-peers=25
+
+# Bootnodes (actualizar con enode real del bootnode después de iniciarlo)
+# Formato: enode://PUBLIC_KEY@IP:PORT
+# IMPORTANTE: Reemplaza BOOTNODE_PUBLIC_KEY con el enode real del bootnode
+bootnodes=["enode://90d9dcc17c4878c48c87a546acfcfef3f07fcecde768f697924e4319b240e8c6603cd538c14e7819701a6acea199a67cd338c3b347388e47b1d8ed73291a1aea@127.0.0.1:30303"]
+
+# Discovery
+discovery-enabled=true
+
+# RPC HTTP (para consultas locales y deploy de contratos)
+rpc-http-enabled=true
+rpc-http-host="127.0.0.1"
+rpc-http-port=8545
+rpc-http-api=["ETH","NET","WEB3","ADMIN","QBFT","TXPOOL","DEBUG"]
+rpc-http-cors-origins=["*"]
+
+# RPC WebSocket
+rpc-ws-enabled=true
+rpc-ws-host="0.0.0.0"
+rpc-ws-port=8546
+rpc-ws-api=["ETH","NET","WEB3"]
+
+# Logging
+logging="INFO"
+
+# Host allowlist
+host-allowlist=["localhost","127.0.0.1"]
+
+# Métricas
+metrics-enabled=true
+metrics-host="0.0.0.0"
+metrics-port=9546
+
+# Minería (mining) habilitada para validador QBFT
+miner-enabled=true
+miner-coinbase="0x0000000000000000000000000000000000000000"
+
+# Sync mode
+sync-mode="FULL"
+
+# Network ID
+network-id=12345
+
+# Gas price (mínimo para transacciones)
+min-gas-price=0
+
+
+
+# Permissioning (descomentar para habilitar whitelist)
+# permissions-nodes-config-file-enabled=true
+# permissions-nodes-config-file="permissions_config.toml"

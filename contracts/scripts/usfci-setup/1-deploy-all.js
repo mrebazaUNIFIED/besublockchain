@@ -25,14 +25,18 @@ async function main() {
   const usfciAddress = await usfci.getAddress();
   console.log("✅ USFCI:", usfciAddress);
 
-  // Deploy LoanNFT
+  // Deploy LoanRegistry (with UserRegistry address)
   console.log("\n📝 Deploying LoanRegistry...");
   const LoanRegistry = await hre.ethers.getContractFactory("LoanRegistry");
-  const loanRegistry = await LoanRegistry.deploy(deployer.address);
+  const loanRegistry = await LoanRegistry.deploy(
+    deployer.address,
+    userRegistryAddress  // <-- NUEVA DEPENDENCIA
+  );
   await loanRegistry.waitForDeployment();
   const loanRegistryAddress = await loanRegistry.getAddress();
   console.log("✅ LoanRegistry:", loanRegistryAddress);
 
+  // Deploy ShareLoans
   console.log("\n📝 Deploying ShareLoans...");
   const ShareLoans = await hre.ethers.getContractFactory("ShareLoans");
   const shareLoans = await ShareLoans.deploy(deployer.address);
@@ -52,12 +56,26 @@ async function main() {
   console.log("\n📝 Initializing USFCI ledger...");
   const initTx = await usfci.initLedger();
   await initTx.wait();
-  console.log("✅ Ledger initialized");
+  console.log("✅ USFCI Ledger initialized");
+
+  // Verificar integración LoanRegistry <-> UserRegistry
+  console.log("\n🔗 Verifying LoanRegistry integration...");
+  const registryAddress = await loanRegistry.userRegistry();
+  console.log("LoanRegistry is using UserRegistry at:", registryAddress);
+  if (registryAddress === userRegistryAddress) {
+    console.log("✅ Integration verified successfully!");
+  } else {
+    console.log("⚠️  Warning: Integration mismatch!");
+  }
+
+  // Obtener network y chainId dinámicamente
+  const networkName = hre.network.name;
+  const chainId = Number((await hre.ethers.provider.getNetwork()).chainId);  // <-- FIX: Convertir BigInt a Number
 
   // Save deployment
   const deployment = {
-    network: "besu",
-    chainId: 12345,
+    network: networkName,
+    chainId: chainId,
     deployer: deployer.address,
     timestamp: new Date().toISOString(),
     contracts: {
@@ -66,6 +84,9 @@ async function main() {
       LoanRegistry: loanRegistryAddress, 
       ShareLoans: shareLoansAddress,      
       Portfolio: portfolioAddress
+    },
+    integrations: {
+      loanRegistryUsesUserRegistry: registryAddress === userRegistryAddress
     }
   };
 
@@ -81,6 +102,12 @@ async function main() {
 
   console.log("\n✅ Deployment complete!");
   console.log("Info saved to: user-data/deployment.json");
+  console.log("\n📋 Summary:");
+  console.log("  UserRegistry:", userRegistryAddress);
+  console.log("  USFCI:", usfciAddress);
+  console.log("  LoanRegistry:", loanRegistryAddress);
+  console.log("  ShareLoans:", shareLoansAddress);
+  console.log("  Portfolio:", portfolioAddress);
 }
 
 main().catch((error) => {

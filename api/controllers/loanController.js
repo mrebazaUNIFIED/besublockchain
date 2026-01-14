@@ -36,12 +36,10 @@ class LoanController {
     }
   }
 
-
-
   /**
- * PUT /api/loans/:loanId
- * Actualizar un loan
- */
+   * PUT /api/loans/:loanId
+   * Actualizar un loan
+   */
   async updateLoan(req, res, next) {
     try {
       const { loanId } = req.params;
@@ -57,7 +55,6 @@ class LoanController {
         });
       }
 
-      // Llama al servicio
       const result = await loanService.updateLoan(privateKey, loanData);
 
       res.json({
@@ -73,6 +70,7 @@ class LoanController {
       next(error);
     }
   }
+
   /**
    * GET /api/loans/:loanId
    * Obtener un loan
@@ -136,6 +134,41 @@ class LoanController {
   }
 
   /**
+   * GET /api/loans/tx/:txId
+   * Obtener loan por TxId con sus cambios
+   */
+  async getLoanByTxId(req, res, next) {
+    try {
+      const { txId } = req.params;
+      
+      console.log(`Getting loan by TxId: ${txId}`);
+      const result = await loanService.getLoanByTxId(txId);
+
+      res.json({
+        success: true,
+        loan: result.loan,
+        changes: result.changes,
+        txId: txId
+      });
+
+    } catch (error) {
+      if (error.message.includes('Transaction not found')) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'Transaction not found' 
+        });
+      }
+      if (error.message.includes('Loan state not found')) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'Loan state not found for this TxId' 
+        });
+      }
+      next(error);
+    }
+  }
+
+  /**
    * DELETE /api/loans/:loanId
    * Eliminar un loan (soft delete)
    */
@@ -170,13 +203,33 @@ class LoanController {
    */
   async getAllLoans(req, res, next) {
     try {
-      const loans = await loanService.queryAllLoans();
+      const offset = parseInt(req.query.offset) || 0;
+      const limit = parseInt(req.query.limit) || 50;
+      const fetchAll = req.query.fetchAll === 'true';
 
-      res.json({
-        success: true,
-        count: loans.length,
-        data: loans
-      });
+      let result;
+
+      if (fetchAll) {
+        const loans = await loanService.queryAllLoansComplete();
+        result = {
+          success: true,
+          count: loans.length,
+          total: loans.length,
+          data: loans
+        };
+      } else {
+        const paginatedResult = await loanService.queryAllLoans(offset, limit);
+        result = {
+          success: true,
+          count: paginatedResult.returned,
+          total: paginatedResult.total,
+          offset: paginatedResult.offset,
+          limit: paginatedResult.limit,
+          data: paginatedResult.loans
+        };
+      }
+
+      res.json(result);
 
     } catch (error) {
       next(error);

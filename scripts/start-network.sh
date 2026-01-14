@@ -3,7 +3,35 @@
 # Script para iniciar la red Besu en el orden correcto
 # Uso: ./start-network.sh
 
-set -e
+echo -e "${YELLOW}⚠ Limpiando procesos Besu previos y liberando puertos...${NC}"
+
+PORTS=(
+  # Bootnode
+  30303 8545 9545
+
+  # Validadores
+  30304 8545 9546
+  30305 8553 9547
+  30308 8554 9550
+  30309 8555 9551
+
+  # RPC Nodes
+  30306 8547 8548 9548
+  30307 8549 8550 9549
+  30310 8551 8552 9552
+)
+
+for port in "${PORTS[@]}"; do
+  PID=$(sudo lsof -ti :$port 2>/dev/null)
+  if [ -n "$PID" ]; then
+    echo -e "${YELLOW}  • Liberando puerto $port (PID $PID)${NC}"
+    sudo kill -9 $PID
+  fi
+done
+
+# Matar cualquier Besu residual
+sudo pkill -f besu || true
+sleep 2
 
 # Colores para output
 RED='\033[0;31m'
@@ -33,15 +61,16 @@ if [ -f "$PIDS_FILE" ]; then
 fi
 
 # Limpiar logs antiguos (opcional)
-find "$BASE_DIR"/Node-*/data -name "besu.log" -type f -exec rm -f {} \; 2>/dev/null || true
+find "$BASE_DIR"/Nodes/Node-*/data -name "besu.log" -type f -exec rm -f {} \; 2>/dev/null || true
 
 # Limpiar archivo de PIDs
-> "$PIDS_FILE"
+rm -f "$PIDS_FILE"
+touch "$PIDS_FILE"
 
 # Función para iniciar un nodo
 start_node() {
     local node_name=$1
-    local node_dir="$BASE_DIR/$node_name"
+    local node_dir="$BASE_DIR/Nodes/$node_name"
     local wait_time=$2
     
     if [ ! -d "$node_dir" ]; then
@@ -156,7 +185,7 @@ done
 echo -e "\n${BLUE}Comandos útiles:${NC}"
 echo -e "  ${YELLOW}./scripts/monitor.sh${NC}      - Monitorear la red"
 echo -e "  ${YELLOW}./scripts/stop-network.sh${NC} - Detener la red"
-echo -e "  ${YELLOW}tail -f Node-*/besu.log${NC}   - Ver logs en tiempo real"
+echo -e "  ${YELLOW}tail -f Nodes/Node-*/besu.log${NC}   - Ver logs en tiempo real"
 
 echo -e "\n${BLUE}Puertos RPC activos:${NC}"
 echo -e "  Node-FCI-Val1:     ${GREEN}http://localhost:8545${NC}"

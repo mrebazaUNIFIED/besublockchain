@@ -8,12 +8,7 @@
     "deploy": "hardhat run scripts/usfci-setup/1-deploy-all.js --network besu",
     "create-users": "hardhat run scripts/usfci-setup/2-create-users.js --network besu",
     "setup-users": "hardhat run scripts/usfci-setup/3-setup-users.js --network besu",
-    "verify": "hardhat run scripts/usfci-setup/4-verify-all.js --network besu",
-    "user:list": "hardhat run scripts/user-management/list-users.js --network besu",
-    "user:create": "hardhat run scripts/user-management/create-single-user.js --network besu --",
-    "user:create-batch": "hardhat run scripts/user-management/create-multiple-users.js --network besu",
-    "user:update": "hardhat run scripts/user-management/update-user.js --network besu --",
-    "user:deactivate": "hardhat run scripts/user-management/deactivate-user.js --network besu --"
+    "verify": "hardhat run scripts/usfci-setup/4-verify-all.js --network besu"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.0",

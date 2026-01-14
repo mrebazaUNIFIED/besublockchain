@@ -1,19 +1,10 @@
 const { ethers } = require('ethers');
-const { provider, CONTRACTS, ABIs } = require('../config/blockchain');
+const { rpcLoadBalancer, CONTRACTS, ABIs } = require('../config/blockchain');
+const BaseContractService = require('./BaseContractService');
 
-class LoanRegistryService {
+class LoanRegistryService extends BaseContractService {
   constructor() {
-    this.contractAddress = CONTRACTS.LoanRegistry;
-    this.abi = ABIs.LoanRegistry;
-  }
-
-  getContract(privateKey) {
-    const wallet = new ethers.Wallet(privateKey, provider);
-    return new ethers.Contract(this.contractAddress, this.abi, wallet);
-  }
-
-  getContractReadOnly() {
-    return new ethers.Contract(this.contractAddress, this.abi, provider);
+    super('LoanRegistry', 'LoanRegistry');
   }
 
   /**
@@ -22,7 +13,6 @@ class LoanRegistryService {
   async createLoan(privateKey, loanData) {
     const contract = this.getContract(privateKey);
 
-    // Los datos vienen con los nombres exactos del contrato
     const tx = await contract.createLoan(
       loanData.ID,
       loanData.UserID,
@@ -74,7 +64,6 @@ class LoanRegistryService {
 
     const receipt = await tx.wait();
 
-    // Parsear evento
     const event = receipt.logs.find(log => {
       try {
         const parsed = contract.interface.parseLog(log);
@@ -87,7 +76,7 @@ class LoanRegistryService {
     let txId = null;
     if (event) {
       const parsed = contract.interface.parseLog(event);
-      txId = parsed.args[2]; // Tercer argumento es txId
+      txId = parsed.args[2];
     }
 
     return {
@@ -100,28 +89,20 @@ class LoanRegistryService {
     };
   }
 
-  /**
- * Actualizar un loan - Usa los nombres EXACTOS del contrato
- */
   async updateLoan(privateKey, loanData) {
-    // Verificar si el loan existe antes de proceder
     const exists = await this.loanExists(loanData.ID);
     if (!exists) {
       throw new Error('Loan does not exist. Use createLoan for new loans.');
     }
-
-    // Llama al mismo createLoan, que el contrato tratará como update
     return await this.createLoan(privateKey, loanData);
   }
 
-  /**
-   * Leer un loan - Devuelve con nombres del contrato
-   */
   async readLoan(loanId) {
     const contract = this.getContractReadOnly();
-    const loan = await contract.readLoan(loanId);
+    const loan = await contract.readLoan(loanId, {
+      gasLimit: 100000000
+    });
 
-    // Devolver exactamente como viene del contrato
     return {
       ID: loan.ID,
       UserID: loan.UserID,
@@ -175,31 +156,70 @@ class LoanRegistryService {
     };
   }
 
-  /**
-   * Buscar loans por UserID
-   */
   async findLoansByUserId(userId) {
     const contract = this.getContractReadOnly();
-    const loans = await contract.findLoansByUserId(userId);
+    const loans = await contract.findLoansByUserId(userId, {
+      gasLimit: 100000000
+    });
 
     return loans.map(loan => ({
-      ID: loan.ID,
-      UserID: loan.UserID,
-      Status: loan.Status,
-      BorrowerFullName: loan.BorrowerFullName,
-      BorrowerPropertyAddress: loan.BorrowerPropertyAddress,
-      CurrentPrincipalBal: ethers.formatEther(loan.CurrentPrincipalBal),
-      NoteRate: Number(loan.NoteRate),
-      BLOCKAUDITCreationAt: new Date(Number(loan.BLOCKAUDITCreationAt) * 1000)
+       ID: loan.ID,
+          LUid: loan.LUid,
+          UserID: loan.UserID,
+          BorrowerFullName: loan.BorrowerFullName,
+          BorrowerHomePhone: loan.BorrowerHomePhone,
+          BorrowerPropertyAddress: loan.BorrowerPropertyAddress,
+          BorrowerState: loan.BorrowerState,
+          BorrowerZip: loan.BorrowerZip,
+          BorrowerCity: loan.BorrowerCity,
+          BorrowerEmail: loan.BorrowerEmail,
+          BorrowerOccupancyStatus: loan.BorrowerOccupancyStatus,
+          CurrentPrincipalBal: ethers.formatEther(loan.CurrentPrincipalBal),
+          RestrictedFunds: ethers.formatEther(loan.RestrictedFunds),
+          SuspenseBalance: ethers.formatEther(loan.SuspenseBalance),
+          EscrowBalance: ethers.formatEther(loan.EscrowBalance),
+          TotalInTrust: ethers.formatEther(loan.TotalInTrust),
+          NoteRate: Number(loan.NoteRate),
+          SoldRate: Number(loan.SoldRate),
+          DefaultRate: Number(loan.DefaultRate),
+          UnpaidInterest: ethers.formatEther(loan.UnpaidInterest),
+          UnpaidFees: ethers.formatEther(loan.UnpaidFees),
+          LateFeesAmount: ethers.formatEther(loan.LateFeesAmount),
+          UnpaidLateFees: ethers.formatEther(loan.UnpaidLateFees),
+          AccruedLateFees: ethers.formatEther(loan.AccruedLateFees),
+          UnpaidLoanCharges: ethers.formatEther(loan.UnpaidLoanCharges),
+          DeferredPrincBalance: ethers.formatEther(loan.DeferredPrincBalance),
+          DeferredUnpCharges: ethers.formatEther(loan.DeferredUnpCharges),
+          OriginalLoanAmount: ethers.formatEther(loan.OriginalLoanAmount),
+          OriginationDate: loan.OriginationDate,
+          NextPaymentDue: loan.NextPaymentDue,
+          LoanMaturityDate: loan.LoanMaturityDate,
+          LastPaymentRec: loan.LastPaymentRec,
+          InterestPaidTo: loan.InterestPaidTo,
+          DeferredUnpaidInt: ethers.formatEther(loan.DeferredUnpaidInt),
+          FCIRestrictedPrincipal: ethers.formatEther(loan.FCIRestrictedPrincipal),
+          FCIRestrictedInterest: ethers.formatEther(loan.FCIRestrictedInterest),
+          PymtGraceDays: Number(loan.PymtGraceDays),
+          DaysSinceLastPymt: Number(loan.DaysSinceLastPymt),
+          NumOfPymtsDue: Number(loan.NumOfPymtsDue),
+          ScheduledPayment: ethers.formatEther(loan.ScheduledPayment),
+          PromisesToPay: Number(loan.PromisesToPay),
+          NFSInLast12Months: Number(loan.NFSInLast12Months),
+          DeferredLateFees: ethers.formatEther(loan.DeferredLateFees),
+          InvestorRestrictedPrincipal: ethers.formatEther(loan.InvestorRestrictedPrincipal),
+          InvestorRestrictedInterest: ethers.formatEther(loan.InvestorRestrictedInterest),
+          Status: loan.Status,
+          TxId: loan.TxId,
+          BLOCKAUDITCreationAt: new Date(Number(loan.BLOCKAUDITCreationAt) * 1000),
+          BLOCKAUDITUpdatedAt: new Date(Number(loan.BLOCKAUDITUpdatedAt) * 1000)
     }));
   }
 
-  /**
-   * Obtener historial con cambios
-   */
   async getLoanHistory(loanId) {
     const contract = this.getContractReadOnly();
-    const result = await contract.getLoanHistoryWithChanges(loanId);
+    const result = await contract.getLoanHistoryWithChanges(loanId, {
+      gasLimit: 100000000
+    });
 
     const history = [];
     for (let i = 0; i < result.txIds.length; i++) {
@@ -221,9 +241,89 @@ class LoanRegistryService {
     return history;
   }
 
-  /**
-   * Eliminar un loan
-   */
+  async getLoanByTxId(txId) {
+    const contract = this.getContractReadOnly();
+
+    try {
+      const result = await contract.getLoanByTxId(txId, {
+        gasLimit: 100000000
+      });
+
+      // result[0] es el loan, result[1] son los changes
+      const loan = result[0];
+      const changes = result[1];
+
+      return {
+        loan: {
+          ID: loan.ID,
+          LUid: loan.LUid,
+          UserID: loan.UserID,
+          BorrowerFullName: loan.BorrowerFullName,
+          BorrowerHomePhone: loan.BorrowerHomePhone,
+          BorrowerPropertyAddress: loan.BorrowerPropertyAddress,
+          BorrowerState: loan.BorrowerState,
+          BorrowerZip: loan.BorrowerZip,
+          BorrowerCity: loan.BorrowerCity,
+          BorrowerEmail: loan.BorrowerEmail,
+          BorrowerOccupancyStatus: loan.BorrowerOccupancyStatus,
+          CurrentPrincipalBal: ethers.formatEther(loan.CurrentPrincipalBal),
+          RestrictedFunds: ethers.formatEther(loan.RestrictedFunds),
+          SuspenseBalance: ethers.formatEther(loan.SuspenseBalance),
+          EscrowBalance: ethers.formatEther(loan.EscrowBalance),
+          TotalInTrust: ethers.formatEther(loan.TotalInTrust),
+          NoteRate: Number(loan.NoteRate),
+          SoldRate: Number(loan.SoldRate),
+          DefaultRate: Number(loan.DefaultRate),
+          UnpaidInterest: ethers.formatEther(loan.UnpaidInterest),
+          UnpaidFees: ethers.formatEther(loan.UnpaidFees),
+          LateFeesAmount: ethers.formatEther(loan.LateFeesAmount),
+          UnpaidLateFees: ethers.formatEther(loan.UnpaidLateFees),
+          AccruedLateFees: ethers.formatEther(loan.AccruedLateFees),
+          UnpaidLoanCharges: ethers.formatEther(loan.UnpaidLoanCharges),
+          DeferredPrincBalance: ethers.formatEther(loan.DeferredPrincBalance),
+          DeferredUnpCharges: ethers.formatEther(loan.DeferredUnpCharges),
+          OriginalLoanAmount: ethers.formatEther(loan.OriginalLoanAmount),
+          OriginationDate: loan.OriginationDate,
+          NextPaymentDue: loan.NextPaymentDue,
+          LoanMaturityDate: loan.LoanMaturityDate,
+          LastPaymentRec: loan.LastPaymentRec,
+          InterestPaidTo: loan.InterestPaidTo,
+          DeferredUnpaidInt: ethers.formatEther(loan.DeferredUnpaidInt),
+          FCIRestrictedPrincipal: ethers.formatEther(loan.FCIRestrictedPrincipal),
+          FCIRestrictedInterest: ethers.formatEther(loan.FCIRestrictedInterest),
+          PymtGraceDays: Number(loan.PymtGraceDays),
+          DaysSinceLastPymt: Number(loan.DaysSinceLastPymt),
+          NumOfPymtsDue: Number(loan.NumOfPymtsDue),
+          ScheduledPayment: ethers.formatEther(loan.ScheduledPayment),
+          PromisesToPay: Number(loan.PromisesToPay),
+          NFSInLast12Months: Number(loan.NFSInLast12Months),
+          DeferredLateFees: ethers.formatEther(loan.DeferredLateFees),
+          InvestorRestrictedPrincipal: ethers.formatEther(loan.InvestorRestrictedPrincipal),
+          InvestorRestrictedInterest: ethers.formatEther(loan.InvestorRestrictedInterest),
+          Status: loan.Status,
+          TxId: loan.TxId,
+          BLOCKAUDITCreationAt: new Date(Number(loan.BLOCKAUDITCreationAt) * 1000),
+          BLOCKAUDITUpdatedAt: new Date(Number(loan.BLOCKAUDITUpdatedAt) * 1000)
+        },
+        changes: changes.map(c => ({
+          PropertyName: c.PropertyName,
+          OldValue: c.OldValue,
+          NewValue: c.NewValue
+        }))
+      };
+    } catch (error) {
+      if (error.message.includes('Transaction not found')) {
+        throw new Error('Transaction not found');
+      }
+      if (error.message.includes('Loan state not found')) {
+        throw new Error('Loan state not found for this TxId');
+      }
+      throw error;
+    }
+  }
+
+
+
   async deleteLoan(privateKey, loanId) {
     const contract = this.getContract(privateKey);
     const tx = await contract.deleteLoan(loanId);
@@ -237,38 +337,134 @@ class LoanRegistryService {
     };
   }
 
-  /**
-   * Verificar si existe
-   */
   async loanExists(loanId) {
     const contract = this.getContractReadOnly();
-    return await contract.loanExists(loanId);
+    return await contract.loanExists(loanId, {
+      gasLimit: 100000000
+    });
   }
 
-  /**
-   * Obtener todos los loans
-   */
-  async queryAllLoans() {
+  async queryAllLoans(offset = 0, limit = 50) {
     const contract = this.getContractReadOnly();
-    const loans = await contract.queryAllLoans();
 
-    return loans.map(loan => ({
-      ID: loan.ID,
-      UserID: loan.UserID,
-      Status: loan.Status,
-      BorrowerFullName: loan.BorrowerFullName,
-      CurrentPrincipalBal: ethers.formatEther(loan.CurrentPrincipalBal),
-      BLOCKAUDITCreationAt: new Date(Number(loan.BLOCKAUDITCreationAt) * 1000)
-    }));
+    try {
+      const result = await contract.queryLoansPaginated(offset, limit, {
+        gasLimit: 100000000
+      });
+
+      const loans = result[0].map(loan => ({
+       ID: loan.ID,
+          LUid: loan.LUid,
+          UserID: loan.UserID,
+          BorrowerFullName: loan.BorrowerFullName,
+          BorrowerHomePhone: loan.BorrowerHomePhone,
+          BorrowerPropertyAddress: loan.BorrowerPropertyAddress,
+          BorrowerState: loan.BorrowerState,
+          BorrowerZip: loan.BorrowerZip,
+          BorrowerCity: loan.BorrowerCity,
+          BorrowerEmail: loan.BorrowerEmail,
+          BorrowerOccupancyStatus: loan.BorrowerOccupancyStatus,
+          CurrentPrincipalBal: ethers.formatEther(loan.CurrentPrincipalBal),
+          RestrictedFunds: ethers.formatEther(loan.RestrictedFunds),
+          SuspenseBalance: ethers.formatEther(loan.SuspenseBalance),
+          EscrowBalance: ethers.formatEther(loan.EscrowBalance),
+          TotalInTrust: ethers.formatEther(loan.TotalInTrust),
+          NoteRate: Number(loan.NoteRate),
+          SoldRate: Number(loan.SoldRate),
+          DefaultRate: Number(loan.DefaultRate),
+          UnpaidInterest: ethers.formatEther(loan.UnpaidInterest),
+          UnpaidFees: ethers.formatEther(loan.UnpaidFees),
+          LateFeesAmount: ethers.formatEther(loan.LateFeesAmount),
+          UnpaidLateFees: ethers.formatEther(loan.UnpaidLateFees),
+          AccruedLateFees: ethers.formatEther(loan.AccruedLateFees),
+          UnpaidLoanCharges: ethers.formatEther(loan.UnpaidLoanCharges),
+          DeferredPrincBalance: ethers.formatEther(loan.DeferredPrincBalance),
+          DeferredUnpCharges: ethers.formatEther(loan.DeferredUnpCharges),
+          OriginalLoanAmount: ethers.formatEther(loan.OriginalLoanAmount),
+          OriginationDate: loan.OriginationDate,
+          NextPaymentDue: loan.NextPaymentDue,
+          LoanMaturityDate: loan.LoanMaturityDate,
+          LastPaymentRec: loan.LastPaymentRec,
+          InterestPaidTo: loan.InterestPaidTo,
+          DeferredUnpaidInt: ethers.formatEther(loan.DeferredUnpaidInt),
+          FCIRestrictedPrincipal: ethers.formatEther(loan.FCIRestrictedPrincipal),
+          FCIRestrictedInterest: ethers.formatEther(loan.FCIRestrictedInterest),
+          PymtGraceDays: Number(loan.PymtGraceDays),
+          DaysSinceLastPymt: Number(loan.DaysSinceLastPymt),
+          NumOfPymtsDue: Number(loan.NumOfPymtsDue),
+          ScheduledPayment: ethers.formatEther(loan.ScheduledPayment),
+          PromisesToPay: Number(loan.PromisesToPay),
+          NFSInLast12Months: Number(loan.NFSInLast12Months),
+          DeferredLateFees: ethers.formatEther(loan.DeferredLateFees),
+          InvestorRestrictedPrincipal: ethers.formatEther(loan.InvestorRestrictedPrincipal),
+          InvestorRestrictedInterest: ethers.formatEther(loan.InvestorRestrictedInterest),
+          Status: loan.Status,
+          TxId: loan.TxId,
+          BLOCKAUDITCreationAt: new Date(Number(loan.BLOCKAUDITCreationAt) * 1000),
+          BLOCKAUDITUpdatedAt: new Date(Number(loan.BLOCKAUDITUpdatedAt) * 1000)
+      }));
+
+      return {
+        loans: loans,
+        total: Number(result[1]),
+        returned: Number(result[2]),
+        offset: offset,
+        limit: limit
+      };
+
+    } catch (error) {
+      console.warn('Pagination not available, using queryAllLoans with high gas limit');
+
+      const loans = await contract.queryAllLoans({
+        gasLimit: 100000000
+      });
+
+      const formattedLoans = loans.map(loan => ({
+        ID: loan.ID,
+        LUid: loan.LUid,
+        BorrowerFullName: loan.BorrowerFullName,
+        BorrowerPropertyAddress: loan.BorrowerPropertyAddress,
+        BorrowerCity: loan.BorrowerCity,
+        BorrowerState: loan.BorrowerState,
+        BorrowerZip: loan.BorrowerZip,
+        CurrentPrincipalBal: ethers.formatEther(loan.CurrentPrincipalBal),
+        UserID: loan.UserID,
+        Status: loan.Status,
+        BLOCKAUDITCreationAt: new Date(Number(loan.BLOCKAUDITCreationAt) * 1000)
+      }));
+
+      return {
+        loans: formattedLoans,
+        total: formattedLoans.length,
+        returned: formattedLoans.length,
+        offset: 0,
+        limit: formattedLoans.length
+      };
+    }
   }
 
-  /**
-   * Buscar por LUid
-   */
+  async queryAllLoansComplete() {
+    const pageSize = 50;
+    let allLoans = [];
+    let offset = 0;
+    let total = 0;
+
+    do {
+      const result = await this.queryAllLoans(offset, pageSize);
+      allLoans = allLoans.concat(result.loans);
+      total = result.total;
+      offset += pageSize;
+    } while (offset < total);
+
+    return allLoans;
+  }
+
   async findLoanByLoanUid(loanUid) {
     const contract = this.getContractReadOnly();
-    const loan = await contract.findLoanByLoanUid(loanUid);
-    return this.readLoan(loan.ID); // Reutiliza readLoan para formatear
+    const loan = await contract.findLoanByLoanUid(loanUid, {
+      gasLimit: 100000000
+    });
+    return this.readLoan(loan.ID);
   }
 }
 

@@ -1,0 +1,50 @@
+{
+  "a1b2c3d4-e5f6-4789-1011-121314151617": {
+    "userId": "a1b2c3d4-e5f6-4789-1011-121314151617",
+    "name": "Sunwest",
+    "organization": "Sunwest",
+    "role": "admin",
+    "address": "0xCAE43a0658c9ce7171bB68D2b92897A8B7AFD61E",
+    "privateKey": "0x800ac225300c3ae1cedf920dab4ad0b9758726fa1e56df9e7992c94534822cbc",
+    "mnemonic": "save review filter dress release coconut orbit rookie cabin guard memory usage",
+    "initialBalance": 0,
+    "createdAt": "2026-01-14T16:30:19.416Z",
+    "passwordHash": "$2b$10$BIxdUv5gw5llDXZzD4U/nuke8TQiR2WxgTAOnntoIAuWj6yUCPj4e"
+  },
+  "b2c3d4e5-f6a7-4890-1213-141516171819": {
+    "userId": "b2c3d4e5-f6a7-4890-1213-141516171819",
+    "name": "Mike",
+    "organization": "FCI",
+    "role": "operator",
+    "address": "0x189aaeA004c7973699c0167731E23AC211C91D1c",
+    "privateKey": "0xa6636d434bb0d6bfdeb043ef03f01ca1f888dba2252f898961ec65d5616d9daf",
+    "mnemonic": "marriage all spike jazz exchange trick volume bench betray saddle shadow zoo",
+    "initialBalance": 0,
+    "createdAt": "2026-01-14T16:30:39.103Z",
+    "passwordHash": "$2b$10$j9xNQDJSh8fKLnwTOWRQhe3lTuxfqS/5ZyGSe8QYqsLoZ6QxCuGa."
+  },
+  "c3d4e5f6-a7b8-4901-2345-678910111213": {
+    "userId": "c3d4e5f6-a7b8-4901-2345-678910111213",
+    "name": "FCI Corporate",
+    "organization": "FCI",
+    "role": "operator",
+    "address": "0x8b5C753305894E943cE53F540ee42323d6CEfB24",
+    "privateKey": "0xa84a621d2b8b60ae5a7909e5e63060b14f1f69344459366fb0e1c868643beaa8",
+    "mnemonic": "throw mask kangaroo undo dilemma pond duty share vessel surface marble reason",
+    "initialBalance": 0,
+    "createdAt": "2026-01-14T16:30:59.238Z",
+    "passwordHash": "$2b$10$a3/o1iDyOPg1SMaY2/pZRu4gz3yBi5inOqmjDesE61BgSxq1cOOBy"
+  },
+  "98aa2ab88b0e45359129779256d54107": {
+    "userId": "98aa2ab88b0e45359129779256d54107",
+    "name": "Tim",
+    "organization": "FCI",
+    "role": "operator",
+    "address": "0x197B0506d0fca120dDdb0F36826C7aae891dfFC3",
+    "privateKey": "0x3fb7548222cd609eb04cb927547d7d7cd2bdaf412c6a51465f134bd57fa2ca01",
+    "mnemonic": "zone empower lock awake dinner gorilla lunch accuse certain curious file laugh",
+    "initialBalance": 0,
+    "createdAt": "2026-01-14T16:31:19.367Z",
+    "passwordHash": "$2b$10$.B/yWQoedLuwzypEECB7beRd9AzVoYIsSogOCR1PVQ/G9biuMohpm"
+  }
+}

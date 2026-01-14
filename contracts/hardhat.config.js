@@ -7,7 +7,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 1,
+        runs: 200,
       },
       viaIR: true,
       evmVersion: "paris",
@@ -24,16 +24,15 @@ module.exports = {
   },
   networks: {
     hardhat: {
-      chainId: 1337
+      chainId: 12345
     },
     besu: {
       url: "http://localhost:8545",
       accounts: [
         "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63",  // FCI Deployer
-        "0xae6ae8e5ccbfb04590405997ee2d52d2b330726137b875053c36d94e974d162f"   // FCI Secondary
       ],
       chainId: 12345,
-      gas: 20000000,
+      gas: 80000000,
       gasPrice: 0,
       timeout: 60000
     }

@@ -1,180 +1,127 @@
-// services/PortfolioService.js
 const { ethers } = require('ethers');
-const { provider, CONTRACTS, ABIs } = require('../config/blockchain');
+const BaseContractService = require('./BaseContractService');
 
-class PortfolioService {
+class PortfolioService extends BaseContractService {
   constructor() {
-    this.contractAddress = CONTRACTS.Portfolio;
-    this.abi = ABIs.Portfolio;
-  }
-
-  getContract(privateKey) {
-    const wallet = new ethers.Wallet(privateKey, provider);
-    return new ethers.Contract(this.contractAddress, this.abi, wallet);
-  }
-
-  getContractReadOnly() {
-    return new ethers.Contract(this.contractAddress, this.abi, provider);
+    super('Portfolio', 'Portfolio');
+    // Gas limit para creación de certificados (puede ser alto si el array de loanIds crece)
+    this.GAS_LIMIT_WRITE = 800000;
   }
 
   /**
-   * Crear certificado de portafolio
+   * Crear certificado de portafolio (Escritura - Sticky Node)
    */
   async createPortfolioCertificate(privateKey, userId, userAddress, loanIds, totalPrincipal) {
-    const contract = this.getContract(privateKey);
-    const tx = await contract.createPortfolioCertificate(
-      userId,
-      userAddress,
-      loanIds,
-      totalPrincipal
-    );
-    const receipt = await tx.wait();
+    try {
+      const contract = this.getContract(privateKey);
+      
+      console.log(`📜 Generando Certificado para Usuario: ${userId} (${loanIds.length} préstamos)...`);
 
-    // Parsear evento
-    const event = receipt.logs.find(log => {
-      try {
-        const parsed = contract.interface.parseLog(log);
-        return parsed && parsed.name === 'CertificateCreated';
-      } catch (e) {
-        return false;
-      }
-    });
+      const tx = await contract.createPortfolioCertificate(
+        userId,
+        userAddress,
+        loanIds,
+        totalPrincipal,
+        { gasLimit: this.GAS_LIMIT_WRITE }
+      );
 
-    return {
-      success: true,
-      txHash: receipt.hash,
-      blockNumber: receipt.blockNumber,
-      gasUsed: receipt.gasUsed.toString(),
-      event: event ? contract.interface.parseLog(event).args : null
-    };
+      console.log(`⏳ Tx enviada: ${tx.hash}. Confirmando...`);
+      const receipt = await tx.wait();
+
+      const event = this._parseEvent(contract, receipt, 'CertificateCreated');
+
+      return {
+        success: true,
+        txHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+        gasUsed: receipt.gasUsed.toString(),
+        event: event ? event.args : null
+      };
+    } catch (error) {
+      console.error("❌ Error en createPortfolioCertificate:", error.message);
+      throw error;
+    }
   }
 
   /**
-   * Actualizar certificado de portafolio
+   * Actualizar certificado (Escritura)
    */
   async updatePortfolioCertificate(privateKey, userId, loanIds, totalPrincipal) {
     const contract = this.getContract(privateKey);
     const tx = await contract.updatePortfolioCertificate(
       userId,
       loanIds,
-      totalPrincipal
+      totalPrincipal,
+      { gasLimit: this.GAS_LIMIT_WRITE }
     );
     const receipt = await tx.wait();
-
-    // Parsear evento
-    const event = receipt.logs.find(log => {
-      try {
-        const parsed = contract.interface.parseLog(log);
-        return parsed && parsed.name === 'CertificateUpdated';
-      } catch (e) {
-        return false;
-      }
-    });
+    const event = this._parseEvent(contract, receipt, 'CertificateUpdated');
 
     return {
       success: true,
       txHash: receipt.hash,
       blockNumber: receipt.blockNumber,
-      gasUsed: receipt.gasUsed.toString(),
-      event: event ? contract.interface.parseLog(event).args : null
+      event: event ? event.args : null
     };
   }
 
-  /**
-   * Obtener certificado por userId
-   */
+  // ==================== MÉTODOS DE LECTURA (Balanced Load) ====================
+
   async getPortfolioCertificate(userId) {
-    const contract = this.getContractReadOnly();
-    const cert = await contract.getPortfolioCertificate(userId);
-
-    return {
-      id: cert.id,
-      userId: cert.userId,
-      userAddress: cert.userAddress,
-      txId: cert.txId,
-      loanIds: cert.loanIds,
-      loansCount: Number(cert.loansCount),
-      totalPrincipal: cert.totalPrincipal.toString(),
-      createdAt: new Date(Number(cert.createdAt) * 1000),
-      lastUpdatedAt: new Date(Number(cert.lastUpdatedAt) * 1000),
-      version: Number(cert.version),
-      exists: cert.exists
-    };
+    const cert = await this.getContractReadOnly().getPortfolioCertificate(userId);
+    return this._mapCertificate(cert);
   }
 
-  /**
-   * Obtener certificado por address
-   */
   async getPortfolioCertificateByAddress(userAddress) {
-    const contract = this.getContractReadOnly();
-    const cert = await contract.getPortfolioCertificateByAddress(userAddress);
-
-    return {
-      id: cert.id,
-      userId: cert.userId,
-      userAddress: cert.userAddress,
-      txId: cert.txId,
-      loanIds: cert.loanIds,
-      loansCount: Number(cert.loansCount),
-      totalPrincipal: cert.totalPrincipal.toString(),
-      createdAt: new Date(Number(cert.createdAt) * 1000),
-      lastUpdatedAt: new Date(Number(cert.lastUpdatedAt) * 1000),
-      version: Number(cert.version),
-      exists: cert.exists
-    };
+    const cert = await this.getContractReadOnly().getPortfolioCertificateByAddress(userAddress);
+    return this._mapCertificate(cert);
   }
 
-  /**
-   * Obtener solo el TxId de un certificado
-   */
-  async getPortfolioCertificateTxId(userId) {
-    const contract = this.getContractReadOnly();
-    return await contract.getPortfolioCertificateTxId(userId);
-  }
-
-  /**
-   * Obtener todos los certificados
-   */
   async getAllCertificates() {
-    const contract = this.getContractReadOnly();
-    const certs = await contract.getAllCertificates();
-
-    return certs.map(cert => ({
-      id: cert.id,
-      userId: cert.userId,
-      userAddress: cert.userAddress,
-      txId: cert.txId,
-      loanIds: cert.loanIds,
-      loansCount: Number(cert.loansCount),
-      totalPrincipal: cert.totalPrincipal.toString(),
-      createdAt: new Date(Number(cert.createdAt) * 1000),
-      lastUpdatedAt: new Date(Number(cert.lastUpdatedAt) * 1000),
-      version: Number(cert.version),
-      exists: cert.exists
-    }));
+    const certs = await this.getContractReadOnly().getAllCertificates();
+    return certs.map(c => this._mapCertificate(c));
   }
 
-  /**
-   * Verificar si existe certificado
-   */
-  async portfolioCertificateExists(userId) {
-    const contract = this.getContractReadOnly();
-    return await contract.portfolioCertificateExists(userId);
-  }
-
-  /**
-   * Obtener estadísticas de certificado
-   */
   async getCertificateStats(userId) {
-    const contract = this.getContractReadOnly();
-    const stats = await contract.getCertificateStats(userId);
-
+    const stats = await this.getContractReadOnly().getCertificateStats(userId);
     return {
       loansCount: Number(stats.loansCount),
       totalPrincipal: stats.totalPrincipal.toString(),
       version: Number(stats.version),
       lastUpdated: new Date(Number(stats.lastUpdated) * 1000)
     };
+  }
+
+  async portfolioCertificateExists(userId) {
+    return await this.getContractReadOnly().portfolioCertificateExists(userId);
+  }
+
+  // ==================== HELPERS ====================
+
+  _mapCertificate(cert) {
+    return {
+      id: cert.id,
+      userId: cert.userId,
+      userAddress: cert.userAddress,
+      txId: cert.txId,
+      loanIds: cert.loanIds,
+      loansCount: Number(cert.loansCount),
+      totalPrincipal: cert.totalPrincipal.toString(),
+      createdAt: new Date(Number(cert.createdAt) * 1000),
+      lastUpdatedAt: new Date(Number(cert.lastUpdatedAt) * 1000),
+      version: Number(cert.version),
+      exists: cert.exists
+    };
+  }
+
+  _parseEvent(contract, receipt, eventName) {
+    const log = receipt.logs.find(l => {
+      try {
+        const p = contract.interface.parseLog(l);
+        return p && p.name === eventName;
+      } catch (e) { return false; }
+    });
+    return log ? contract.interface.parseLog(log) : null;
   }
 }
 

@@ -1,5 +1,5 @@
 const { ethers } = require('ethers');
-const { provider, CONTRACTS, ABIs } = require('../config/blockchain');
+const { readLoadBalancer, writeLoadBalancer, CONTRACTS, ABIs } = require('../config/blockchain');
 const fs = require('fs');
 const path = require('path');
 
@@ -9,191 +9,151 @@ class UserRegistryService {
     this.abi = ABIs.UserRegistry;
   }
 
+  // ✅ ESCRITURA: Usa el nodo fijo (Failover) para mantener el Nonce sincronizado
   getContract(privateKey) {
+    const provider = writeLoadBalancer.getProvider();
+    
+    // Si el provider emite un error de red, lo reportamos para rotar el nodo
+    provider.on("error", (error) => {
+      console.warn(`⚠️ Error detectado en el nodo de escritura: ${provider.connection.url}`);
+      writeLoadBalancer.reportError(provider.connection.url);
+    });
+
     const wallet = new ethers.Wallet(privateKey, provider);
     return new ethers.Contract(this.contractAddress, this.abi, wallet);
   }
 
+  // ✅ LECTURA: Usa el balanceador Round Robin para repartir la carga
   getContractReadOnly() {
+    const provider = readLoadBalancer.getProvider();
     return new ethers.Contract(this.contractAddress, this.abi, provider);
   }
 
-  /**
-   * Registrar un usuario, generando wallet si no se proporciona
-   * @param {string} funderPrivateKey - Private key del funder para financiar (opcional)
-   * @param {object} userData - Datos: userId, name, organization, role, walletAddress (opcional), initialBalance (opcional)
-   */
   async registerUser(funderPrivateKey, userData) {
     let wallet;
     let generated = false;
 
     if (!userData.walletAddress) {
-      // Generar nueva wallet si no se proporciona
       wallet = ethers.Wallet.createRandom();
       generated = true;
       userData.walletAddress = wallet.address;
       console.log(`Wallet generada: ${wallet.address}`);
-    } else {
-      wallet = new ethers.Wallet(userData.privateKey || ''); // Si se proporciona, pero mejor no manejar private keys aquí
     }
 
-    // Financiar si se pide initialBalance y hay funder
-    if (userData.initialBalance && funderPrivateKey) {
-      const funderWallet = new ethers.Wallet(funderPrivateKey, provider);
-      const fundTx = await funderWallet.sendTransaction({
-        to: userData.walletAddress,
-        value: ethers.parseEther(userData.initialBalance.toString())
+    try {
+      // 1. Financiar si es necesario
+      if (userData.initialBalance && funderPrivateKey) {
+        const provider = writeLoadBalancer.getProvider();
+        const funderWallet = new ethers.Wallet(funderPrivateKey, provider);
+        
+        console.log(`Financiando ${userData.walletAddress} con ${userData.initialBalance} ETH...`);
+        const fundTx = await funderWallet.sendTransaction({
+          to: userData.walletAddress,
+          value: ethers.parseEther(userData.initialBalance.toString()),
+          gasLimit: 21000 // Gas estándar para transferencia simple
+        });
+        await fundTx.wait();
+        console.log(`✓ Financiado con ${userData.initialBalance} ETH`);
+      }
+
+      // 2. Registrar en contrato
+      const contract = this.getContract(funderPrivateKey || process.env.OWNER_PRIVATE_KEY);
+      
+      console.log('Enviando registro a la Blockchain...');
+      const tx = await contract.registerUser(
+        userData.walletAddress,
+        userData.userId,
+        userData.name,
+        userData.organization,
+        userData.role,
+        { gasLimit: 500000 } // Colchón de gas para evitar fallos de estimación en Besu
+      );
+      
+      console.log(`Transacción enviada: ${tx.hash}, esperando confirmación rápida...`);
+      const receipt = await tx.wait();
+      console.log(`✓ Usuario registrado en bloque ${receipt.blockNumber}`);
+
+      // 3. Parsear evento
+      const event = receipt.logs.find(log => {
+        try {
+          const parsed = contract.interface.parseLog(log);
+          return parsed && parsed.name === 'UserRegistered';
+        } catch (e) { return false; }
       });
-      await fundTx.wait();
-      console.log(`Financiado con ${userData.initialBalance} ETH`);
-    }
 
-    // Registrar en contrato (usa owner private key, asume que el caller es owner)
-    const contract = this.getContract(funderPrivateKey || process.env.OWNER_PRIVATE_KEY); // Usa funder u owner key
-    const tx = await contract.registerUser(
-      userData.walletAddress,
-      userData.userId,
-      userData.name,
-      userData.organization,
-      userData.role
-    );
-    const receipt = await tx.wait();
+      // 4. Guardar datos locales (Dev)
+      if (generated) {
+        this._saveUserLocally(userData, wallet);
+      }
 
-    // Parsear evento
-    const event = receipt.logs.find(log => {
-      try {
-        const parsed = contract.interface.parseLog(log);
-        return parsed && parsed.name === 'UserRegistered';
-      } catch (e) {
-        return false;
-      }
-    });
-
-    // Guardar private key temporalmente (SOLO DEV, no en prod)
-    if (generated) {
-      const userDataDir = path.join(__dirname, '..', '..', 'user-data');
-      if (!fs.existsSync(userDataDir)) {
-        fs.mkdirSync(userDataDir, { recursive: true });
-      }
-      const usersFile = path.join(userDataDir, 'users.json');
-      let existingUsers = {};
-      if (fs.existsSync(usersFile)) {
-        existingUsers = JSON.parse(fs.readFileSync(usersFile));
-      }
-      existingUsers[userData.userId] = {
-        ...userData,
-        privateKey: wallet.privateKey,
-        mnemonic: wallet.mnemonic.phrase
+      return {
+        success: true,
+        walletAddress: userData.walletAddress,
+        userId: userData.userId,
+        txHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+        gasUsed: receipt.gasUsed.toString(),
+        event: event ? contract.interface.parseLog(event).args : null,
+        generatedWallet: generated,
+        privateKey: generated ? wallet.privateKey : undefined
       };
-      fs.writeFileSync(usersFile, JSON.stringify(existingUsers, null, 2));
-    }
 
-    return {
-      success: true,
-      walletAddress: userData.walletAddress,
-      userId: userData.userId,
-      txHash: receipt.hash,
-      blockNumber: receipt.blockNumber,
-      gasUsed: receipt.gasUsed.toString(),
-      event: event ? contract.interface.parseLog(event).args : null,
-      generatedWallet: generated,
-      privateKey: generated ? wallet.privateKey : undefined // ⚠️ Solo devuelve para test, elimina en prod
-    };
-  }
-
-  /**
-   * Actualizar un usuario - Usa los nombres EXACTOS del contrato
-   */
-  async updateUser(privateKey, walletAddress, updateData) {
-    const contract = this.getContract(privateKey);
-
-    const tx = await contract.updateUser(
-      walletAddress,
-      updateData.name,
-      updateData.role
-    );
-
-    const receipt = await tx.wait();
-
-    // Parsear evento
-    const event = receipt.logs.find(log => {
-      try {
-        const parsed = contract.interface.parseLog(log);
-        return parsed && parsed.name === 'UserUpdated';
-      } catch (e) {
-        return false;
+    } catch (error) {
+      console.error('❌ Error en registerUser:', error.message);
+      // Forzamos rotación de nodo si hubo un error de conexión
+      if (error.code === 'NETWORK_ERROR' || error.code === 'TIMEOUT') {
+        writeLoadBalancer.rotateNode();
       }
-    });
-
-    return {
-      success: true,
-      walletAddress,
-      txHash: receipt.hash,
-      blockNumber: receipt.blockNumber,
-      gasUsed: receipt.gasUsed.toString(),
-      event: event ? contract.interface.parseLog(event).args : null
-    };
+      throw error;
+    }
   }
 
-  /**
-   * Desactivar un usuario
-   */
+  // Métodos de actualización (Update, Deactivate, etc.) optimizados
+  async updateUser(privateKey, walletAddress, updateData) {
+    try {
+      const contract = this.getContract(privateKey);
+      const tx = await contract.updateUser(walletAddress, updateData.name, updateData.role, { gasLimit: 300000 });
+      const receipt = await tx.wait();
+      return { success: true, txHash: receipt.hash, blockNumber: receipt.blockNumber };
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
+  }
+
   async deactivateUser(privateKey, walletAddress) {
     const contract = this.getContract(privateKey);
-    const tx = await contract.deactivateUser(walletAddress);
+    const tx = await contract.deactivateUser(walletAddress, { gasLimit: 200000 });
     const receipt = await tx.wait();
-
-    return {
-      success: true,
-      walletAddress,
-      txHash: receipt.hash,
-      blockNumber: receipt.blockNumber,
-      gasUsed: receipt.gasUsed.toString()
-    };
+    return { success: true, txHash: receipt.hash, blockNumber: receipt.blockNumber };
   }
 
-  /**
-   * Reactivar un usuario
-   */
   async reactivateUser(privateKey, walletAddress) {
     const contract = this.getContract(privateKey);
-    const tx = await contract.reactivateUser(walletAddress);
+    const tx = await contract.reactivateUser(walletAddress, { gasLimit: 200000 });
     const receipt = await tx.wait();
-
-    return {
-      success: true,
-      walletAddress,
-      txHash: receipt.hash,
-      blockNumber: receipt.blockNumber,
-      gasUsed: receipt.gasUsed.toString()
-    };
+    return { success: true, txHash: receipt.hash, blockNumber: receipt.blockNumber };
   }
 
-  /**
-   * Leer un usuario por walletAddress - Devuelve con nombres del contrato
-   */
+  // --- MÉTODOS DE LECTURA (Sin cambios, ya usan ReadLoadBalancer) ---
+  
   async getUser(walletAddress) {
-    const contract = this.getContractReadOnly();
-    const user = await contract.getUser(walletAddress);
-
-    return {
-      userId: user.userId,
-      name: user.name,
-      organization: user.organization,
-      role: user.role,
-      walletAddress: user.walletAddress,
-      registeredAt: new Date(Number(user.registeredAt) * 1000),
-      isActive: user.isActive
-    };
+    const user = await this.getContractReadOnly().getUser(walletAddress);
+    return this._mapUser(user);
   }
 
-  /**
-   * Leer un usuario por userId
-   */
   async getUserByUserId(userId) {
-    const contract = this.getContractReadOnly();
-    const user = await contract.getUserByUserId(userId);
+    const user = await this.getContractReadOnly().getUserByUserId(userId);
+    return this._mapUser(user);
+  }
 
+  async getUsersByOrganization(organization, start = 0, limit = 10) {
+    const users = await this.getContractReadOnly().getUsersByOrganization(organization, start, limit);
+    return users.map(u => this._mapUser(u));
+  }
+
+  // Helpers internos
+  _mapUser(user) {
     return {
       userId: user.userId,
       name: user.name,
@@ -205,54 +165,13 @@ class UserRegistryService {
     };
   }
 
-  /**
-   * Obtener usuarios por organización con paginación
-   */
-  async getUsersByOrganization(organization, start = 0, limit = 10) {
-    const contract = this.getContractReadOnly();
-    const users = await contract.getUsersByOrganization(organization, start, limit);
-
-    return users.map(user => ({
-      userId: user.userId,
-      name: user.name,
-      organization: user.organization,
-      role: user.role,
-      walletAddress: user.walletAddress,
-      registeredAt: new Date(Number(user.registeredAt) * 1000),
-      isActive: user.isActive
-    }));
-  }
-
-  /**
-   * Verificar si usuario está activo
-   */
-  async isUserActive(walletAddress) {
-    const contract = this.getContractReadOnly();
-    return await contract.isUserActive(walletAddress);
-  }
-
-  /**
-   * Verificar si usuario está registrado
-   */
-  async userRegistered(walletAddress) {
-    const contract = this.getContractReadOnly();
-    return await contract.userRegistered(walletAddress);
-  }
-
-  /**
-   * Obtener total de usuarios
-   */
-  async getTotalUsers() {
-    const contract = this.getContractReadOnly();
-    return Number(await contract.getTotalUsers());
-  }
-
-  /**
-   * Obtener conteo de usuarios activos
-   */
-  async getActiveUsersCount() {
-    const contract = this.getContractReadOnly();
-    return Number(await contract.getActiveUsersCount());
+  _saveUserLocally(userData, wallet) {
+    const userDataDir = path.join(__dirname, '..', '..', 'user-data');
+    if (!fs.existsSync(userDataDir)) fs.mkdirSync(userDataDir, { recursive: true });
+    const usersFile = path.join(userDataDir, 'users.json');
+    let users = fs.existsSync(usersFile) ? JSON.parse(fs.readFileSync(usersFile)) : {};
+    users[userData.userId] = { ...userData, privateKey: wallet.privateKey, mnemonic: wallet.mnemonic.phrase };
+    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
   }
 }
 

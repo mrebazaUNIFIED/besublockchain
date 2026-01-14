@@ -5,10 +5,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title ShareLoans
- * @dev Gestiona el compartir acceso a loans entre usuarios
+ * @dev Gestiona el compartir acceso a accounts (loans) entre usuarios
  * 
  * Funcionalidad:
- * - Un usuario puede compartir acceso de lectura de sus loans
+ * - Un usuario puede compartir acceso de lectura a sus accounts (loans)
  * - Múltiples usuarios pueden tener acceso
  * - Se puede activar/desactivar el compartir
  * - Se mantiene un registro de quién comparte qué con quién
@@ -17,10 +17,10 @@ contract ShareLoans is Ownable {
     
     struct ShareAsset {
         string key;                  // ID único del share (ej: "share_mike_001")
-        address ownerAddress;        // Dueño del loan (quien comparte)
+        address ownerAddress;        // Dueño del account (quien comparte)
         string ownerUserId;          // UserID del dueño
-        string loanId;               // ID del loan compartido
-        string description;          // Descripción del share
+        string[] accounts;           // IDs de los loans/accounts compartidos
+        string name;                 // Nombre del share
         address[] sharedWith;        // Addresses con acceso
         string[] sharedWithUserIds;  // UserIDs con acceso (para búsqueda)
         bool isActive;               // Estado del share
@@ -29,10 +29,10 @@ contract ShareLoans is Ownable {
     }
     
     // Mappings
-    mapping(string => ShareAsset) private shareAssets;           // key → ShareAsset
-    mapping(address => string[]) private userShares;             // ownerAddress → keys[]
-    mapping(address => string[]) private sharedWithMe;           // sharedAddress → keys[]
-    mapping(string => mapping(address => bool)) private hasAccess; // key → address → bool
+    mapping(string => ShareAsset) private shareAssets;          
+    mapping(address => string[]) private userShares;             
+    mapping(address => string[]) private sharedWithMe;          
+    mapping(string => mapping(address => bool)) private hasAccess; 
     
     string[] private allShareKeys;
     
@@ -40,7 +40,7 @@ contract ShareLoans is Ownable {
     event ShareCreated(
         string indexed key,
         address indexed owner,
-        string loanId,
+        uint256 accountsLength,
         uint256 timestamp
     );
     
@@ -82,22 +82,22 @@ contract ShareLoans is Ownable {
      * @dev Crea un nuevo share asset
      * @param key ID único del share
      * @param ownerUserId UserID del dueño
-     * @param loanId ID del loan a compartir
-     * @param description Descripción del share
+     * @param accounts IDs de los loans/accounts a compartir
+     * @param name Nombre del share
      * @param sharedWithAddresses Addresses con acceso
      * @param sharedWithUserIds UserIDs con acceso (mismo orden que addresses)
      */
     function createShareAsset(
         string memory key,
         string memory ownerUserId,
-        string memory loanId,
-        string memory description,
+        string[] memory accounts,
+        string memory name,
         address[] memory sharedWithAddresses,
         string[] memory sharedWithUserIds
     ) public returns (bool) {
         require(bytes(key).length > 0, "Key required");
         require(bytes(ownerUserId).length > 0, "Owner UserID required");
-        require(bytes(loanId).length > 0, "Loan ID required");
+        require(accounts.length > 0, "Accounts required");
         require(bytes(shareAssets[key].key).length == 0, "Share key already exists");
         require(
             sharedWithAddresses.length == sharedWithUserIds.length,
@@ -110,8 +110,8 @@ contract ShareLoans is Ownable {
         newShare.key = key;
         newShare.ownerAddress = msg.sender;
         newShare.ownerUserId = ownerUserId;
-        newShare.loanId = loanId;
-        newShare.description = description;
+        newShare.accounts = accounts;
+        newShare.name = name;
         newShare.sharedWith = sharedWithAddresses;
         newShare.sharedWithUserIds = sharedWithUserIds;
         newShare.isActive = true;
@@ -130,7 +130,7 @@ contract ShareLoans is Ownable {
             emit AccessGranted(key, sharedWithAddresses[i], sharedWithUserIds[i], currentTime);
         }
         
-        emit ShareCreated(key, msg.sender, loanId, currentTime);
+        emit ShareCreated(key, msg.sender, accounts.length, currentTime);
         return true;
     }
     
@@ -295,7 +295,7 @@ contract ShareLoans is Ownable {
     /**
      * @dev Obtiene todos los share assets (admin)
      */
-    function queryAllShareAssets() public view returns (ShareAsset[] memory) {
+    function queryAllShareAssets() public view onlyOwner returns (ShareAsset[] memory) {
         ShareAsset[] memory shares = new ShareAsset[](allShareKeys.length);
         
         for (uint256 i = 0; i < allShareKeys.length; i++) {

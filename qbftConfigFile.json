@@ -17,19 +17,7 @@
     "coinbase": "0x0000000000000000000000000000000000000000",
     "alloc": {
       "fe3b557e8fb62b89f4916b721be55ceb828dbd73": {
-        "comment": "FCI Deployer Account",
-        "balance": "0x200000000000000000000000000000000000000000000000000000000000000"
-      },
-      "627306090abaB3A6e1400e9345bC60c78a8BEf57": {
-        "comment": "FCI Secondary Account",
-        "balance": "0x200000000000000000000000000000000000000000000000000000000000000"
-      },
-      "f17f52151EbEF6C7334FAD080c5704D77216b732": {
-        "comment": "Sunwest Deployer Account",
-        "balance": "0x200000000000000000000000000000000000000000000000000000000000000"
-      },
-      "C5fdf4076b8F3A5357c5E395ab970B5B54098Fef": {
-        "comment": "Sunwest Secondary Account",
+        "comment": "FCI Deployer Account (Funder)",
         "balance": "0x200000000000000000000000000000000000000000000000000000000000000"
       }
     }

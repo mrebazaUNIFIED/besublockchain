@@ -1,22 +1,22 @@
 {
-  "alfred_001": {
-    "userId": "alfred_001",
-    "name": "Alfredo",
+  "alfred_005": {
+    "userId": "alfred_005",
+    "name": "Alfredo 5",
     "organization": "FCI",
     "role": "operator",
     "initialBalance": "200",
-    "walletAddress": "0x27656EDC72b657beef0d08124FE3c7bc8B7e3781",
-    "privateKey": "0xedfd10ac23653f008c2e5d356729747488b2b68b729089b87367a893cd2fd0a5",
-    "mnemonic": "electric magnet merge knock amateur lazy bargain either crawl gravity sunset cross"
+    "walletAddress": "0x691b7E83EeB4351E56E46383C2F5371D745Ef0C0",
+    "privateKey": "0x565e7ee1539a6189a17d887b6c4622df03b4e984b2c50831dd96106178253d16",
+    "mnemonic": "news clean donkey camp public weird palm reflect pride usage report recycle"
   },
-  "alfred_002": {
-    "userId": "alfred_002",
-    "name": "Alfredo 2",
+  "alfred_007": {
+    "userId": "alfred_007",
+    "name": "Alfredo 7",
     "organization": "FCI",
     "role": "operator",
-    "initialBalance": "200",
-    "walletAddress": "0x7B6AcdE7875B63A657349C18ae2e9F658C36FE27",
-    "privateKey": "0x35fee92b3f8e38633c655839bdb453fdad842db7e3bed2944549d3194246966c",
-    "mnemonic": "secret bar infant mobile expose muffin skin champion alien company virtual please"
+    "initialBalance": "300",
+    "walletAddress": "0x60bf1921729bc39E4b6975e4eFcF419Eb460a10A",
+    "privateKey": "0xeb6d39b27bb1e99a63b7fba630bc8be64b76ec0b1ca6f765a9cd5ef464a39aa3",
+    "mnemonic": "wolf salad voice once whip sketch power search twice radio debris subway"
   }
 }

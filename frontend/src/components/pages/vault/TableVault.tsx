@@ -1,0 +1,255 @@
+import { useState } from "react";
+import { Search, Share2 } from "lucide-react";
+import { useMyLoans } from "../../../services/apiVault";
+import { useVaultAuth } from "../../../hooks/useVaultAuth";
+import { formatMoney } from "../../../lib/utils";
+import type { CompactLoan } from "../../../types/vaultTypes";
+import { LoanDetailModal } from "../../Modals/LoanDetailModal";
+import { SharedModal } from "./shared/SharedModal"; 
+
+export const TableVault = () => {
+  const { vaultUser } = useVaultAuth();
+  const userId = vaultUser?.uid || "";
+  const { data: loans, isLoading, isError, refetch } = useMyLoans(userId, !!userId);
+  const [filter, setFilter] = useState<"All" | "Open" | "Closed">("All");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLoans, setSelectedLoans] = useState<string[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectLoanDetail, setSelectLoanDetail] = useState<CompactLoan | null>(null);
+  const [isSharedModalOpen, setIsSharedModalOpen] = useState(false);
+
+  // Filtrar préstamos por estado
+  const statusFilteredLoans =
+    loans?.filter((loan: CompactLoan) => {
+      if (filter === "All") return true;
+      if (filter === "Open") {
+        const status = loan.Status?.toLowerCase();
+        return status === "active" || status === "performing";
+      }
+      if (filter === "Closed") {
+        const status = loan.Status?.toLowerCase();
+        return status === "closed" || status === "paid off";
+      }
+      return true;
+    }) || [];
+
+  // Filtrar por búsqueda (nombre o dirección)
+  const filteredLoans = statusFilteredLoans.filter((loan: CompactLoan) => {
+    const search = searchTerm.toLowerCase();
+    const name = loan.BorrowerFullName?.toLowerCase() || "";
+    const address = loan.BorrowerPropertyAddress?.toLowerCase() || "";
+    const id = loan.ID?.toLowerCase() || "";
+    return name.includes(search) || address.includes(search) || id.includes(search);
+  });
+
+  const handleOpenModal = (loan: CompactLoan) => {
+    setIsOpen(true);
+    setSelectLoanDetail(loan);
+  };
+
+  const onCloseModal = () => {
+    setIsOpen(false);
+  };
+
+  // Manejar selección individual
+  const handleSelectLoan = (loanId: string) => {
+    setSelectedLoans((prev) =>
+      prev.includes(loanId)
+        ? prev.filter((id) => id !== loanId)
+        : [...prev, loanId]
+    );
+  };
+
+  // Seleccionar/deseleccionar todos
+  const handleSelectAll = () => {
+    if (selectedLoans.length === filteredLoans.length) {
+      setSelectedLoans([]);
+    } else {
+      setSelectedLoans(filteredLoans.map((loan) => loan.ID));
+    }
+  };
+
+  // Manejar compartir - ahora abre el modal
+  const handleShare = () => {
+    setIsSharedModalOpen(true);
+  };
+
+  const handleCloseSharedModal = () => {
+    setIsSharedModalOpen(false);
+  };
+
+  // Obtener los préstamos seleccionados completos
+  const selectedLoansData = filteredLoans.filter((loan) =>
+    selectedLoans.includes(loan.ID)
+  );
+
+  return (
+    <div className="bg-white rounded-2xl shadow-md p-6 overflow-x-auto">
+      {/* Buscador */}
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search by name, address, or loan ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      {/* Controles */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <label className="font-medium text-gray-700">Display</label>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as any)}
+          className="border border-gray-300 rounded-md p-1"
+        >
+          <option value="All">All</option>
+          <option value="Open">Open</option>
+          <option value="Closed">Closed</option>
+        </select>
+
+        <button
+          onClick={() => refetch()}
+          className="cursor-pointer bg-blue-500 text-white px-4 py-1 rounded-md hover:bg-blue-600 transition"
+        >
+          Refresh
+        </button>
+
+        <button
+          onClick={() => {
+            setFilter("All");
+            setSearchTerm("");
+            setSelectedLoans([]);
+          }}
+          className="cursor-pointer bg-gray-200 px-4 py-1 rounded-md hover:bg-gray-300 transition"
+        >
+          Clear Filters
+        </button>
+
+        {/* Botón de compartir (aparece cuando hay selección) */}
+        {selectedLoans.length > 0 && (
+          <button
+            onClick={handleShare}
+            className="cursor-pointer ml-auto bg-green-500 text-white px-4 py-1 rounded-md hover:bg-green-600 transition flex items-center gap-2"
+          >
+            <Share2 className="w-4 h-4" />
+            Share ({selectedLoans.length})
+          </button>
+        )}
+      </div>
+
+      <div className="overflow-auto max-h-[500px]">
+        <table className="min-w-full border border-gray-200 rounded-lg overflow-hidden table-fixed">
+          <thead className="bg-blue-500 text-white">
+            <tr>
+              <th className="p-2 sticky top-0 bg-blue-500 z-10 w-12">
+                <input
+                  type="checkbox"
+                  checked={
+                    filteredLoans.length > 0 &&
+                    selectedLoans.length === filteredLoans.length
+                  }
+                  onChange={handleSelectAll}
+                  className="w-4 h-4 cursor-pointer"
+                />
+              </th>
+              <th className="p-2 sticky top-0 bg-blue-500 z-10">Loan A.D</th>
+              <th className="p-2 sticky top-0 bg-blue-500 z-10">Name</th>
+              <th className="p-2 sticky top-0 bg-blue-500 z-10">Hash</th>
+              <th className="p-2 sticky top-0 bg-blue-500 z-10">Address</th>
+              <th className="p-2 sticky top-0 bg-blue-500 z-10">City</th>
+              <th className="p-2 sticky top-0 bg-blue-500 z-10">State</th>
+              <th className="p-2 sticky top-0 bg-blue-500 z-10">Zip</th>
+              <th className="p-2 sticky top-0 bg-blue-500 z-10">Unpaid Balance</th>
+              <th className="p-2 sticky top-0 bg-blue-500 z-10"></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={10} className="text-center p-4 text-gray-600">
+                  Loading loans...
+                </td>
+              </tr>
+            ) : isError ? (
+              <tr>
+                <td colSpan={10} className="text-center p-4 text-red-600">
+                  Error loading loans. Please try again.
+                </td>
+              </tr>
+            ) : !loans || filteredLoans.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="text-center p-4 text-gray-600">
+                  {searchTerm || filter !== "All" 
+                    ? "No loans match your filters" 
+                    : "No loans available"}
+                </td>
+              </tr>
+            ) : (
+              filteredLoans.map((loan: CompactLoan) => (
+                <tr
+                  key={loan.ID}
+                  className={`border-t transition-colors text-center ${
+                    selectedLoans.includes(loan.ID)
+                      ? "bg-blue-50"
+                      : "hover:bg-gray-50"
+                  }`}
+                >
+                  <td className="p-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedLoans.includes(loan.ID)}
+                      onChange={() => handleSelectLoan(loan.ID)}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                  </td>
+                  <td className="p-2 font-medium">{loan.ID}</td>
+                  <td className="p-2">{loan.BorrowerFullName }</td>
+                  <td className="p-2 truncate max-w-[120px] font-mono text-xs" title={loan.TxId}>
+                    {loan.TxId ? `${loan.TxId.slice(0, 10)}...${loan.TxId.slice(-8)}` : 'N/A'}
+                  </td>
+                  <td className="p-2">{loan.BorrowerPropertyAddress }</td>
+                  <td className="p-2">{loan.BorrowerCity }</td>
+                  <td className="p-2">{loan.BorrowerState }</td>
+                  <td className="p-2">{loan.BorrowerZip }</td>
+                  <td className="p-2 text-right font-semibold">
+                    ${formatMoney(Number(loan.CurrentPrincipalBal || 0))}
+                  </td>
+                  <td className="p-2">
+                    <button
+                      onClick={() => handleOpenModal(loan)}
+                      className="cursor-pointer bg-blue-500 text-white px-4 py-1 rounded-md hover:bg-blue-600 transition"
+                    >
+                      Details
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+
+        {/* Modal de detalles del préstamo */}
+        {selectLoanDetail && (
+          <LoanDetailModal
+            isOpen={isOpen}
+            onClose={onCloseModal}
+            loan={selectLoanDetail}
+          />
+        )}
+
+        {/* Modal de compartir */}
+        <SharedModal
+          isOpen={isSharedModalOpen}
+          onClose={handleCloseSharedModal}
+          selectedLoans={selectedLoansData}
+        />
+      </div>
+    </div>
+  );
+};

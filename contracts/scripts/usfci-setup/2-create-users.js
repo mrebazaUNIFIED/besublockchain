@@ -8,9 +8,10 @@ async function main() {
   const [funder] = await hre.ethers.getSigners();
 
   const usersToCreate = [
-    { userId: "sunwest_001", name: "Sunwest", organization: "Sunwest", role: "admin", initialBalance: 1000 },
-    { userId: "mike_001", name: "Mike", organization: "FCI", role: "operator", initialBalance: 500 },
-    { userId: "fci_corporate", name: "FCI Corporate Account", organization: "FCI", role: "operator", initialBalance: 500 }
+    { userId: "a1b2c3d4-e5f6-4789-1011-121314151617", name: "Sunwest", organization: "Sunwest", role: "admin", initialBalance: 0 },
+    { userId: "b2c3d4e5-f6a7-4890-1213-141516171819", name: "Mike", organization: "FCI", role: "operator", initialBalance: 0 },
+    { userId: "c3d4e5f6-a7b8-4901-2345-678910111213", name: "FCI Corporate", organization: "FCI", role: "operator", initialBalance: 0 },
+    { userId: "98aa2ab88b0e45359129779256d54107", name: "Tim", organization: "FCI", role: "operator", initialBalance: 0 }
   ];
 
   const createdUsers = {};

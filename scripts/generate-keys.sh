@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Script para regenerar genesis con cuentas pre-fondeadas
-# Basado en tu generate-keys.sh pero añadiendo cuentas con claves conocidas
+# Script para regenerar genesis sin cuentas pre-fondeadas
+# Basado en tu generate-keys.sh pero sin cuentas en alloc
 
 set -e
 
 echo "======================================"
-echo "Regenerando Genesis con Cuentas Fondeadas"
+echo "Regenerando Genesis sin Cuentas Fondeadas"
 echo "======================================"
 
 # Colores para output
@@ -55,8 +55,8 @@ cp genesis.json "$BACKUP_DIR/" 2>/dev/null || true
 cp qbftConfigFile.json "$BACKUP_DIR/" 2>/dev/null || true
 echo -e "${GREEN}✓ Backup guardado en $BACKUP_DIR/${NC}"
 
-# Paso 2: Actualizar qbftConfigFile.json con cuentas fondeadas
-echo -e "\n${YELLOW}Actualizando qbftConfigFile.json con cuentas fondeadas...${NC}"
+# Paso 2: Actualizar qbftConfigFile.json sin cuentas fondeadas
+echo -e "\n${YELLOW}Actualizando qbftConfigFile.json sin cuentas fondeadas...${NC}"
 
 cat > qbftConfigFile.json << 'EOF'
 {
@@ -78,19 +78,7 @@ cat > qbftConfigFile.json << 'EOF'
     "coinbase": "0x0000000000000000000000000000000000000000",
     "alloc": {
       "fe3b557e8fb62b89f4916b721be55ceb828dbd73": {
-        "comment": "FCI Deployer Account",
-        "balance": "0x200000000000000000000000000000000000000000000000000000000000000"
-      },
-      "627306090abaB3A6e1400e9345bC60c78a8BEf57": {
-        "comment": "FCI Secondary Account",
-        "balance": "0x200000000000000000000000000000000000000000000000000000000000000"
-      },
-      "f17f52151EbEF6C7334FAD080c5704D77216b732": {
-        "comment": "Sunwest Deployer Account",
-        "balance": "0x200000000000000000000000000000000000000000000000000000000000000"
-      },
-      "C5fdf4076b8F3A5357c5E395ab970B5B54098Fef": {
-        "comment": "Sunwest Secondary Account",
+        "comment": "FCI Deployer Account (Funder)",
         "balance": "0x200000000000000000000000000000000000000000000000000000000000000"
       }
     }
@@ -112,18 +100,18 @@ echo -e "\n${YELLOW}Deteniendo la red...${NC}"
 
 # Paso 4: Limpiar datos antiguos de blockchain
 echo -e "\n${YELLOW}Limpiando datos de blockchain antiguos...${NC}"
-rm -rf Node-FCI-Boot/data/database Node-FCI-Boot/data/caches
-rm -rf Node-FCI-Val1/data/database Node-FCI-Val1/data/caches
-rm -rf Node-FCI-Val2/data/database Node-FCI-Val2/data/caches
-rm -rf Node-FCI-RPC1/data/database Node-FCI-RPC1/data/caches
-rm -rf Node-FCI-RPC2/data/database Node-FCI-RPC2/data/caches
-rm -rf Node-Sunwest-Val1/data/database Node-Sunwest-Val1/data/caches
-rm -rf Node-Sunwest-Val2/data/database Node-Sunwest-Val2/data/caches
-rm -rf Node-Sunwest-RPC/data/database Node-Sunwest-RPC/data/caches
+rm -rf Nodes/Node-FCI-Boot/data/database Nodes/Node-FCI-Boot/data/caches
+rm -rf Nodes/Node-FCI-Val1/data/database Nodes/Node-FCI-Val1/data/caches
+rm -rf Nodes/Node-FCI-Val2/data/database Nodes/Node-FCI-Val2/data/caches
+rm -rf Nodes/Node-FCI-RPC1/data/database Nodes/Node-FCI-RPC1/data/caches
+rm -rf Nodes/Node-FCI-RPC2/data/database Nodes/Node-FCI-RPC2/data/caches
+rm -rf Nodes/Node-Sunwest-Val1/data/database Nodes/Node-Sunwest-Val1/data/caches
+rm -rf Nodes/Node-Sunwest-Val2/data/database Nodes/Node-Sunwest-Val2/data/caches
+rm -rf Nodes/Node-Sunwest-RPC/data/database Nodes/Node-Sunwest-RPC/data/caches
 
 # Limpiar metadata
-find Node-*/data -name "DATABASE_METADATA.json" -delete 2>/dev/null || true
-find Node-*/data -name "VERSION_METADATA.json" -delete 2>/dev/null || true
+find Nodes/Node-*/data -name "DATABASE_METADATA.json" -delete 2>/dev/null || true
+find Nodes/Node-*/data -name "VERSION_METADATA.json" -delete 2>/dev/null || true
 
 echo -e "${GREEN}✓ Datos antiguos limpiados${NC}"
 
@@ -153,10 +141,10 @@ echo -e "${GREEN}✓ genesis.json copiado${NC}"
 echo -e "\n${YELLOW}Asignando keys a validadores...${NC}"
 
 # Limpiar keys antiguas
-rm -f Node-FCI-Val1/data/key Node-FCI-Val1/data/key.pub
-rm -f Node-FCI-Val2/data/key Node-FCI-Val2/data/key.pub
-rm -f Node-Sunwest-Val1/data/key Node-Sunwest-Val1/data/key.pub
-rm -f Node-Sunwest-Val2/data/key Node-Sunwest-Val2/data/key.pub
+rm -f Nodes/Node-FCI-Val1/data/key Nodes/Node-FCI-Val1/data/key.pub
+rm -f Nodes/Node-FCI-Val2/data/key Nodes/Node-FCI-Val2/data/key.pub
+rm -f Nodes/Node-Sunwest-Val1/data/key Nodes/Node-Sunwest-Val1/data/key.pub
+rm -f Nodes/Node-Sunwest-Val2/data/key Nodes/Node-Sunwest-Val2/data/key.pub
 
 # Listar las addresses generadas
 KEYS_DIRS=(networkFiles/keys/*)
@@ -167,73 +155,37 @@ fi
 
 # Asignar keys en orden: FCI-Val1, FCI-Val2, Sunwest-Val1, Sunwest-Val2
 echo "Asignando:"
-echo "  ${KEYS_DIRS[0]} -> Node-FCI-Val1/data/"
-cp -r ${KEYS_DIRS[0]}/* Node-FCI-Val1/data/
+echo "  ${KEYS_DIRS[0]} -> Nodes/Node-FCI-Val1/data/"
+cp -r ${KEYS_DIRS[0]}/* Nodes/Node-FCI-Val1/data/
 
-echo "  ${KEYS_DIRS[1]} -> Node-FCI-Val2/data/"
-cp -r ${KEYS_DIRS[1]}/* Node-FCI-Val2/data/
+echo "  ${KEYS_DIRS[1]} -> Nodes/Node-FCI-Val2/data/"
+cp -r ${KEYS_DIRS[1]}/* Nodes/Node-FCI-Val2/data/
 
-echo "  ${KEYS_DIRS[2]} -> Node-Sunwest-Val1/data/"
-cp -r ${KEYS_DIRS[2]}/* Node-Sunwest-Val1/data/
+echo "  ${KEYS_DIRS[2]} -> Nodes/Node-Sunwest-Val1/data/"
+cp -r ${KEYS_DIRS[2]}/* Nodes/Node-Sunwest-Val1/data/
 
-echo "  ${KEYS_DIRS[3]} -> Node-Sunwest-Val2/data/"
-cp -r ${KEYS_DIRS[3]}/* Node-Sunwest-Val2/data/
+echo "  ${KEYS_DIRS[3]} -> Nodes/Node-Sunwest-Val2/data/"
+cp -r ${KEYS_DIRS[3]}/* Nodes/Node-Sunwest-Val2/data/
 
 echo -e "${GREEN}✓ Keys asignadas a validadores${NC}"
 
-# Limpiar keys de nodos RPC/Bootnode (se regenerarán automáticamente)
-rm -f Node-FCI-Boot/data/key
-rm -f Node-FCI-RPC1/data/key
-rm -f Node-FCI-RPC2/data/key
-rm -f Node-Sunwest-RPC/data/key
+# Limpiar keys de nodos RPC/Boot (se regenerarán automáticamente)
+rm -f Nodes/Node-FCI-Boot/data/key
+rm -f Nodes/Node-FCI-RPC1/data/key
+rm -f Nodes/Node-FCI-RPC2/data/key
+rm -f Nodes/Node-Sunwest-RPC/data/key
 
 echo -e "${YELLOW}Nota: Bootnode y nodos RPC generarán sus keys automáticamente al iniciar${NC}"
 
 # Resumen
 echo -e "\n${GREEN}======================================"
-echo "Genesis Regenerado Exitosamente"
+echo "Genesis Regenerado Exitosamente (sin cuentas iniciales)"
 echo "======================================${NC}"
 echo ""
-echo -e "${BLUE}Cuentas Pre-Fondeadas Disponibles:${NC}\n"
-
-echo -e "${GREEN}1. FCI Deployer:${NC}"
-echo -e "   Address:     ${YELLOW}0xfe3b557e8fb62b89f4916b721be55ceb828dbd73${NC}"
-echo -e "   Private Key: ${YELLOW}8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63${NC}"
-echo ""
-
-echo -e "${GREEN}2. FCI Secondary:${NC}"
-echo -e "   Address:     ${YELLOW}0x627306090abaB3A6e1400e9345bC60c78a8BEf57${NC}"
-echo -e "   Private Key: ${YELLOW}c87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3${NC}"
-echo ""
-
-echo -e "${GREEN}3. Sunwest Deployer:${NC}"
-echo -e "   Address:     ${YELLOW}0xf17f52151EbEF6C7334FAD080c5704D77216b732${NC}"
-echo -e "   Private Key: ${YELLOW}ae6ae8e5ccbfb04590405997ee2d52d2b330726137b875053c36d94e974d162f${NC}"
-echo ""
-
-echo -e "${GREEN}4. Sunwest Secondary:${NC}"
-echo -e "   Address:     ${YELLOW}0xC5fdf4076b8F3A5357c5E395ab970B5B54098Fef${NC}"
-echo -e "   Private Key: ${YELLOW}0dbbe8e4ae425a6d2687f1a7e3ba17bc98c673636790f1b8ad91193c05875ef1${NC}"
-echo ""
-
-echo -e "${BLUE}Agregar a tu archivo .env:${NC}"
-cat << 'ENVEOF'
-
-# FCI Deployer Account
-FCI_DEPLOYER_ADDRESS=0xfe3b557e8fb62b89f4916b721be55ceb828dbd73
-FCI_DEPLOYER_PRIVATE_KEY=8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63
-
-# Sunwest Deployer Account
-SUNWEST_DEPLOYER_ADDRESS=0xf17f52151EbEF6C7334FAD080c5704D77216b732
-SUNWEST_DEPLOYER_PRIVATE_KEY=ae6ae8e5ccbfb04590405997ee2d52d2b330726137b875053c36d94e974d162f
-ENVEOF
-
-echo ""
 echo -e "${YELLOW}Próximos pasos:${NC}"
-echo -e "  1. Actualizar .env con las claves de arriba"
-echo -e "  2. Iniciar la red: ${BLUE}./scripts/start-network.sh${NC}"
-echo -e "  3. Verificar balances: ${BLUE}./scripts/create-accounts.sh${NC}"
-echo -e "  4. Deploy contratos: ${BLUE}cd contracts && npm run deploy${NC}"
+echo -e "  1. Iniciar la red: ${BLUE}./scripts/start-network.sh${NC}"
+echo -e "  2. Verificar balances: ${BLUE}./scripts/create-accounts.sh${NC}"
+echo -e "  3. Deploy contratos: ${BLUE}cd contracts && npm run deploy${NC}"
 echo ""
 echo -e "${GREEN}Backup anterior guardado en: $BACKUP_DIR/${NC}"
 echo ""
