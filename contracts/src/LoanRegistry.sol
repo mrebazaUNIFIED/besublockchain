@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./UserRegistry.sol"; // Asumiendo que UserRegistry está en el mismo directorio o ajusta la ruta
+import "./UserRegistry.sol";
 
 contract LoanRegistry is Ownable {
-    UserRegistry public userRegistry; // Cambiado a public para exponer el getter
+    UserRegistry public userRegistry;
+    address public marketplaceBridge; // Bridge autorizado
 
     struct Loan {
         string ID;
@@ -58,6 +60,10 @@ contract LoanRegistry is Ownable {
         uint256 BLOCKAUDITCreationAt;
         uint256 BLOCKAUDITUpdatedAt;
         bool exists;
+        // ===== CAMPOS DE TOKENIZACIÓN =====
+        uint256 avalancheTokenId; // 0 = no tokenizado, >0 = tokenizado
+        uint256 lastSyncTimestamp; // Última sincronización con Avalanche
+        bool isLocked; // true = tokenizado, bloqueado para edición
     }
 
     struct Change {
@@ -80,21 +86,20 @@ contract LoanRegistry is Ownable {
     }
 
     // Mappings principales
-    mapping(string => Loan) private loans; // ID => Loan
-    mapping(string => string[]) private loanHistoryIds; // ID => array de IDs históricos
-    mapping(string => Loan) private loanHistory; // historicalId => Loan snapshot
-    mapping(bytes32 => LoanActivity) private activities; // TxId => Activity
-    mapping(string => bytes32[]) private loanTransactions; // ID => array de TxIds
+    mapping(string => Loan) private loans;
+    mapping(string => string[]) private loanHistoryIds;
+    mapping(string => Loan) private loanHistory;
+    mapping(bytes32 => LoanActivity) private activities;
+    mapping(string => bytes32[]) private loanTransactions;
 
     // Índices para búsquedas
-    mapping(string => string[]) private userIdToLoanIds; // UserID => array de Loan IDs
-    mapping(string => string) private luidToLoanId; // LUid => Loan ID
-    mapping(bytes32 => string) private txIdToLoanId; // TxId => Loan ID
+    mapping(string => string[]) private userIdToLoanIds;
+    mapping(string => string) private luidToLoanId;
+    mapping(bytes32 => string) private txIdToLoanId;
 
-    // Array de todos los IDs de préstamos
     string[] private allLoanIds;
 
-    // Eventos
+    // ===== EVENTOS =====
     event LoanCreated(
         string indexed loanId,
         string indexed userId,
@@ -103,6 +108,19 @@ contract LoanRegistry is Ownable {
     );
     event LoanUpdated(string indexed loanId, bytes32 txId, uint256 changeCount);
     event LoanDeleted(string indexed loanId, bytes32 txId);
+    event LoanLocked(string indexed loanId, uint256 timestamp);
+    event LoanUnlocked(string indexed loanId, uint256 timestamp);
+    event AvalancheTokenIdSet(
+        string indexed loanId,
+        uint256 tokenId,
+        uint256 timestamp
+    );
+    event LockedLoanUpdated(
+        string indexed loanId,
+        uint256 newBalance,
+        string newStatus,
+        uint256 timestamp
+    );
 
     constructor(
         address initialOwner,
@@ -115,7 +133,7 @@ contract LoanRegistry is Ownable {
         userRegistry = UserRegistry(userRegistryAddress);
     }
 
-    // Modificador para autorizar operators y admins
+    // ===== MODIFICADORES =====
     modifier onlyAuthorized() {
         if (msg.sender != owner()) {
             UserRegistry.User memory user = userRegistry.getUser(msg.sender);
@@ -130,8 +148,131 @@ contract LoanRegistry is Ownable {
         _;
     }
 
-    // ==================== FUNCIONES PRINCIPALES ====================
+    modifier onlyBridge() {
+        require(msg.sender == marketplaceBridge, "Only MarketplaceBridge");
+        _;
+    }
 
+    // ===== FUNCIONES DE ADMINISTRACIÓN =====
+    function setMarketplaceBridge(address _bridge) external onlyOwner {
+        require(_bridge != address(0), "Invalid bridge address");
+        marketplaceBridge = _bridge;
+    }
+
+    // ===== FUNCIONES DE BLOQUEO (Solo MarketplaceBridge) =====
+    function lockLoan(string memory loanId) external onlyBridge returns (bool) {
+        require(loans[loanId].exists, "Loan does not exist");
+        require(!loans[loanId].isLocked, "Already locked");
+
+        // Validaciones de negocio
+        require(
+            loans[loanId].CurrentPrincipalBal > 0,
+            "Loan balance must be > 0"
+        );
+        require(
+            keccak256(bytes(loans[loanId].Status)) !=
+                keccak256(bytes("Paid Off")),
+            "Cannot tokenize paid off loan"
+        );
+
+        loans[loanId].isLocked = true;
+        emit LoanLocked(loanId, block.timestamp);
+        return true;
+    }
+
+    function unlockLoan(
+        string memory loanId
+    ) external onlyBridge returns (bool) {
+        require(loans[loanId].exists, "Loan does not exist");
+        require(loans[loanId].isLocked, "Not locked");
+
+        loans[loanId].isLocked = false;
+        loans[loanId].avalancheTokenId = 0; // Reset token ID al desbloquear
+
+        emit LoanUnlocked(loanId, block.timestamp);
+        return true;
+    }
+
+    function setAvalancheTokenId(
+        string memory loanId,
+        uint256 tokenId
+    ) external onlyBridge returns (bool) {
+        require(loans[loanId].exists, "Loan does not exist");
+        require(loans[loanId].isLocked, "Loan must be locked first");
+        require(tokenId > 0, "Invalid token ID");
+        require(loans[loanId].avalancheTokenId == 0, "Token ID already set");
+
+        loans[loanId].avalancheTokenId = tokenId;
+        loans[loanId].lastSyncTimestamp = block.timestamp;
+
+        emit AvalancheTokenIdSet(loanId, tokenId, block.timestamp);
+        return true;
+    }
+
+    function updateSyncTimestamp(
+        string memory loanId
+    ) external onlyBridge returns (bool) {
+        require(loans[loanId].exists, "Loan does not exist");
+        loans[loanId].lastSyncTimestamp = block.timestamp;
+        return true;
+    }
+
+    // ===== ACTUALIZACIÓN DE LOANS BLOQUEADOS =====
+    function updateLockedLoan(
+        string memory loanId,
+        uint256 newBalance,
+        uint256 newUnpaidInterest,
+        string memory newStatus,
+        string memory newLastPaymentRec,
+        uint256 newDaysSinceLastPymt
+    ) external onlyAuthorized returns (bytes32) {
+        require(loans[loanId].exists, "Loan does not exist");
+        require(loans[loanId].isLocked, "Only for locked loans");
+        require(loans[loanId].avalancheTokenId > 0, "NFT not minted yet");
+
+        bytes32 txId = keccak256(
+            abi.encodePacked(
+                block.timestamp,
+                block.number,
+                loanId,
+                "LOCKED_UPDATE"
+            )
+        );
+
+        Loan storage loan = loans[loanId];
+
+        // Solo actualizar campos "dinámicos" (no info del borrower)
+        loan.CurrentPrincipalBal = newBalance;
+        loan.UnpaidInterest = newUnpaidInterest;
+        loan.Status = newStatus;
+        loan.LastPaymentRec = newLastPaymentRec;
+        loan.DaysSinceLastPymt = newDaysSinceLastPymt;
+        loan.BLOCKAUDITUpdatedAt = block.timestamp;
+        loan.TxId = txId;
+
+        loanTransactions[loanId].push(txId);
+        txIdToLoanId[txId] = loanId;
+
+        emit LockedLoanUpdated(loanId, newBalance, newStatus, block.timestamp);
+        return txId;
+    }
+
+    // ===== FUNCIONES DE VISTA =====
+    function isLoanLocked(string memory loanId) public view returns (bool) {
+        return loans[loanId].isLocked;
+    }
+
+    function isLoanTokenized(string memory loanId) public view returns (bool) {
+        return loans[loanId].avalancheTokenId > 0;
+    }
+
+    function getAvalancheTokenId(
+        string memory loanId
+    ) public view returns (uint256) {
+        return loans[loanId].avalancheTokenId;
+    }
+
+    // ===== FUNCIONES PRINCIPALES (con protección mejorada) =====
     function createLoan(
         string memory _ID,
         string memory _UserID,
@@ -187,13 +328,21 @@ contract LoanRegistry is Ownable {
         );
         require(bytes(_ID).length > 0, "Loan ID is required");
 
+        // ✅ FIX CRÍTICO: Validar que el loan no esté bloqueado si ya existe
+        if (loans[_ID].exists) {
+            require(
+                !loans[_ID].isLocked,
+                "Cannot update locked loan via createLoan"
+            );
+        }
+
         bytes32 txId = keccak256(
             abi.encodePacked(block.timestamp, block.number, _ID, msg.sender)
         );
         uint256 creationTimestamp = block.timestamp;
+        bool isUpdate = loans[_ID].exists;
 
-        // Si el préstamo ya existe, mantener la fecha de creación original
-        if (loans[_ID].exists) {
+        if (isUpdate) {
             creationTimestamp = loans[_ID].BLOCKAUDITCreationAt;
         }
 
@@ -249,42 +398,45 @@ contract LoanRegistry is Ownable {
             TxId: txId,
             BLOCKAUDITCreationAt: creationTimestamp,
             BLOCKAUDITUpdatedAt: block.timestamp,
-            exists: true
+            exists: true,
+            // ✅ FIX: No preservar estado de tokenización en updates normales
+            avalancheTokenId: isUpdate ? oldLoan.avalancheTokenId : 0,
+            lastSyncTimestamp: isUpdate ? oldLoan.lastSyncTimestamp : 0,
+            isLocked: isUpdate ? oldLoan.isLocked : false
         });
 
-        // Guardar snapshot en el historial
         string memory historicalId = string(
             abi.encodePacked(_ID, "_", uint2str(block.timestamp))
         );
         loanHistory[historicalId] = newLoan;
         loanHistoryIds[_ID].push(historicalId);
 
-        // Crear actividad con cambios
         LoanActivity storage activity = activities[txId];
         activity.TxId = txId;
         activity.LoanInformationId = _ID;
         activity.Timestamp = block.timestamp;
 
-        if (oldLoan.exists) {
+        if (isUpdate) {
             _compareLoans(oldLoan, newLoan, activity);
             emit LoanUpdated(_ID, txId, activity.Changes.length);
         } else {
-            // Es un nuevo préstamo, agregarlo a los índices
             allLoanIds.push(_ID);
             userIdToLoanIds[_UserID].push(_ID);
             emit LoanCreated(_ID, _UserID, txId, block.timestamp);
         }
 
-        // Actualizar índices
         if (
             bytes(oldLoan.LUid).length > 0 &&
             keccak256(bytes(oldLoan.LUid)) != keccak256(bytes(_LUid))
         ) {
             delete luidToLoanId[oldLoan.LUid];
         }
-        luidToLoanId[_LUid] = _ID;
+        if (bytes(_LUid).length > 0) {
+            luidToLoanId[_LUid] = _ID;
+        }
 
         if (
+            isUpdate &&
             bytes(oldLoan.UserID).length > 0 &&
             keccak256(bytes(oldLoan.UserID)) != keccak256(bytes(_UserID))
         ) {
@@ -292,7 +444,6 @@ contract LoanRegistry is Ownable {
             userIdToLoanIds[_UserID].push(_ID);
         }
 
-        // Guardar el préstamo actual
         loans[_ID] = newLoan;
         loanTransactions[_ID].push(txId);
         txIdToLoanId[txId] = _ID;
@@ -309,25 +460,28 @@ contract LoanRegistry is Ownable {
         string memory loanId
     ) public onlyAuthorized returns (bytes32) {
         require(loans[loanId].exists, "Loan does not exist");
+        require(!loans[loanId].isLocked, "Cannot delete locked loan");
+        require(
+            loans[loanId].avalancheTokenId == 0,
+            "Cannot delete tokenized loan"
+        );
 
         bytes32 txId = keccak256(
             abi.encodePacked(block.timestamp, block.number, loanId, "DELETE")
         );
-
         Loan memory loan = loans[loanId];
 
-        // Crear actividad de eliminación
         LoanActivity storage activity = activities[txId];
         activity.TxId = txId;
         activity.LoanInformationId = loanId;
         activity.Timestamp = block.timestamp;
 
-        // Limpiar índices
-        delete luidToLoanId[loan.LUid];
+        if (bytes(loan.LUid).length > 0) {
+            delete luidToLoanId[loan.LUid];
+        }
         _removeFromUserIndex(loan.UserID, loanId);
         _removeFromAllLoans(loanId);
 
-        // Marcar como eliminado pero mantener historial
         loans[loanId].exists = false;
         loanTransactions[loanId].push(txId);
         txIdToLoanId[txId] = loanId;
@@ -339,8 +493,6 @@ contract LoanRegistry is Ownable {
     function loanExists(string memory loanId) public view returns (bool) {
         return loans[loanId].exists;
     }
-
-    // ==================== FUNCIONES DE HISTORIAL ====================
 
     function getLoanHistory(
         string memory loanId
@@ -550,8 +702,7 @@ contract LoanRegistry is Ownable {
         return (ids, txIds);
     }
 
-    // ==================== FUNCIONES AUXILIARES ====================
-
+    // ===== FUNCIONES AUXILIARES =====
     function _compareLoans(
         Loan memory oldLoan,
         Loan memory newLoan,
@@ -566,30 +717,6 @@ contract LoanRegistry is Ownable {
                     "BorrowerFullName",
                     oldLoan.BorrowerFullName,
                     newLoan.BorrowerFullName
-                )
-            );
-        }
-        if (
-            keccak256(bytes(oldLoan.BorrowerHomePhone)) !=
-            keccak256(bytes(newLoan.BorrowerHomePhone))
-        ) {
-            activity.Changes.push(
-                Change(
-                    "BorrowerHomePhone",
-                    oldLoan.BorrowerHomePhone,
-                    newLoan.BorrowerHomePhone
-                )
-            );
-        }
-        if (
-            keccak256(bytes(oldLoan.BorrowerPropertyAddress)) !=
-            keccak256(bytes(newLoan.BorrowerPropertyAddress))
-        ) {
-            activity.Changes.push(
-                Change(
-                    "BorrowerPropertyAddress",
-                    oldLoan.BorrowerPropertyAddress,
-                    newLoan.BorrowerPropertyAddress
                 )
             );
         }
@@ -609,16 +736,6 @@ contract LoanRegistry is Ownable {
                 )
             );
         }
-        if (oldLoan.UnpaidInterest != newLoan.UnpaidInterest) {
-            activity.Changes.push(
-                Change(
-                    "UnpaidInterest",
-                    uint2str(oldLoan.UnpaidInterest),
-                    uint2str(newLoan.UnpaidInterest)
-                )
-            );
-        }
-        // Agregar más comparaciones según sea necesario para otros campos críticos
     }
 
     function _removeFromUserIndex(
@@ -646,9 +763,7 @@ contract LoanRegistry is Ownable {
     }
 
     function uint2str(uint256 _i) internal pure returns (string memory) {
-        if (_i == 0) {
-            return "0";
-        }
+        if (_i == 0) return "0";
         uint256 j = _i;
         uint256 len;
         while (j != 0) {
@@ -659,21 +774,40 @@ contract LoanRegistry is Ownable {
         uint256 k = len;
         while (_i != 0) {
             k = k - 1;
-            uint8 temp = (48 + uint8(_i - (_i / 10) * 10));
-            bytes1 b1 = bytes1(temp);
-            bstr[k] = b1;
+            bstr[k] = bytes1(uint8(48 + (_i % 10)));
             _i /= 10;
         }
         return string(bstr);
     }
 
-    // ==================== FUNCIONES DE UTILIDAD ====================
-
+    // ===== FUNCIONES DE UTILIDAD =====
     function getTotalLoansCount() public view returns (uint256) {
-        return allLoanIds.length;
+        uint256 activeCount = 0;
+        for (uint256 i = 0; i < allLoanIds.length; i++) {
+            if (loans[allLoanIds[i]].exists) {
+                activeCount++;
+            }
+        }
+        return activeCount;
     }
 
     function getAllLoanIds() public view returns (string[] memory) {
-        return allLoanIds;
+        uint256 activeCount = 0;
+        for (uint256 i = 0; i < allLoanIds.length; i++) {
+            if (loans[allLoanIds[i]].exists) {
+                activeCount++;
+            }
+        }
+
+        string[] memory activeIds = new string[](activeCount);
+        uint256 index = 0;
+        for (uint256 i = 0; i < allLoanIds.length; i++) {
+            if (loans[allLoanIds[i]].exists) {
+                activeIds[index] = allLoanIds[i];
+                index++;
+            }
+        }
+
+        return activeIds;
     }
 }

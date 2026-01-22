@@ -35,7 +35,8 @@ const CONTRACTS = {
   LoanRegistry: process.env.LOAN_REGISTRY_ADDRESS,
   ShareLoans: process.env.SHARE_LOANS_ADDRESS,
   Portfolio: process.env.PORTFOLIO_ADDRESS,
-  FCICorporate: process.env.FCI_CORPORATE_ADDRESS
+  FCICorporate: process.env.FCI_CORPORATE_ADDRESS,
+  MarketplaceBridge: process.env.MARKETPLACE_BRIDGE_ADDRESS,
 };
 
 // 4. ABIs (Carga segura)
@@ -55,6 +56,7 @@ const ABIs = {
   LoanRegistry: getAbi('LoanRegistry'),
   ShareLoans: getAbi('ShareLoans'),
   Portfolio: getAbi('Portfolio'),
+  MarketplaceBridge: getAbi('MarketplaceBridge'),
 };
 
 module.exports = {

@@ -8,10 +8,10 @@ const setupPasswords = async () => {
 
   // Define las contraseñas para cada wallet
   const passwords = {
-    '0xCAE43a0658c9ce7171bB68D2b92897A8B7AFD61E': '$2a$12$HS6KBuFSKMbumIzCRZR.fOaHD/SfZ7C.JYc4NGb8CBTaeh42mBm02',     // Sunwest (admin)
-    '0x189aaeA004c7973699c0167731E23AC211C91D1c': '$2a$12$Wh3aqtll0bmjCCGeNPgOxeM.hRcrce.oTdSUa8x7F6qFD8cWcX4w6',        // Mike (operator)
-    '0x8b5C753305894E943cE53F540ee42323d6CEfB24': '$2a$12$hJOpPFGkPql94bGKtI6dL.FOAyyiK2QEiYSvT9fEoWwMSzksv4xme',    // FCI Corporate (operator)
-    '0x197B0506d0fca120dDdb0F36826C7aae891dfFC3': '$2a$12$wysVx36TYTQ3AgVqkyyi9.NPuY4wNX4eKF4zAIhZsc.1vAKcAjdGW'         // Tim (operator)
+    '0x3Ff25Cd5Cafd1145B06dDA46B072bDbc12270D45': '$2a$12$HS6KBuFSKMbumIzCRZR.fOaHD/SfZ7C.JYc4NGb8CBTaeh42mBm02',     // Sunwest (admin)
+    '0xeBDaAb738e7eddb9342AFa42Ae9Ae59FBd2ff407': '$2a$12$Wh3aqtll0bmjCCGeNPgOxeM.hRcrce.oTdSUa8x7F6qFD8cWcX4w6',        // Mike (operator)
+    '0x40f8d08940D1408968E1105a8E1237e48af967b1': '$2a$12$hJOpPFGkPql94bGKtI6dL.FOAyyiK2QEiYSvT9fEoWwMSzksv4xme',    // FCI Corporate (operator)
+    '0x7edA1b1e0B07Fbe7D06E7767054d737F4973D38E': '$2a$12$wysVx36TYTQ3AgVqkyyi9.NPuY4wNX4eKF4zAIhZsc.1vAKcAjdGW'         // Tim (operator)
   };
 
   try {

@@ -92,6 +92,7 @@ app.use('/users', require('./routes/user.routes'));
 app.use('/usfci', require('./routes/usfci.routes'));
 app.use('/share', require('./routes/share.routes'));
 app.use('/portfolio', require('./routes/portfolio.routes'));
+app.use('/marketplace', require('./routes/marketplace.routes'));
 
 // --- Manejo de Errores ---
 app.use((req, res) => {

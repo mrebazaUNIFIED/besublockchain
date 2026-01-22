@@ -1,11 +1,36 @@
 import { useState } from "react";
-import { Search, Share2 } from "lucide-react";
+import { Search, Share2, Store } from "lucide-react";
 import { useMyLoans } from "../../../services/apiVault";
 import { useVaultAuth } from "../../../hooks/useVaultAuth";
 import { formatMoney } from "../../../lib/utils";
 import type { CompactLoan } from "../../../types/vaultTypes";
 import { LoanDetailModal } from "../../Modals/LoanDetailModal";
-import { SharedModal } from "./shared/SharedModal"; 
+import { SharedModal } from "./shared/SharedModal";
+import { DetailMarketplace } from "./marketplace/DetailMarketplace";
+import { useTokenizationStatus } from "../../../services/apiMarketplace";
+
+const PublishButton = ({ loan, onClick }: { loan: CompactLoan; onClick: () => void }) => {
+  const { data: tokenizationStatus, isLoading } = useTokenizationStatus(loan.ID, true);
+  
+  const isTokenized = tokenizationStatus?.isTokenized ;
+  const isDisabled = isLoading || isTokenized;
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={isDisabled}
+      className={`px-3 py-1 rounded-md transition flex items-center gap-1 text-sm ${
+        isDisabled
+          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+          : "bg-green-500 text-white hover:bg-green-600 cursor-pointer"
+      }`}
+      title={isTokenized ? "Already tokenized" : isLoading ? "Loading..." : "Publish to marketplace"}
+    >
+      <Store className="w-4 h-4" />
+      {isTokenized ? "Publish" : "Publish"}
+    </button>
+  );
+};
 
 export const TableVault = () => {
   const { vaultUser } = useVaultAuth();
@@ -17,8 +42,10 @@ export const TableVault = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectLoanDetail, setSelectLoanDetail] = useState<CompactLoan | null>(null);
   const [isSharedModalOpen, setIsSharedModalOpen] = useState(false);
+  const [isMarketplaceModalOpen, setIsMarketplaceModalOpen] = useState(false);
+  const [selectedLoanForMarketplace, setSelectedLoanForMarketplace] = useState<CompactLoan | null>(null);
+  
 
-  // Filtrar préstamos por estado
   const statusFilteredLoans =
     loans?.filter((loan: CompactLoan) => {
       if (filter === "All") return true;
@@ -76,6 +103,17 @@ export const TableVault = () => {
 
   const handleCloseSharedModal = () => {
     setIsSharedModalOpen(false);
+  };
+
+  // Manejar marketplace
+  const handleOpenMarketplace = (loan: CompactLoan) => {
+    setSelectedLoanForMarketplace(loan);
+    setIsMarketplaceModalOpen(true);
+  };
+
+  const handleCloseMarketplace = () => {
+    setIsMarketplaceModalOpen(false);
+    setSelectedLoanForMarketplace(null);
   };
 
   // Obtener los préstamos seleccionados completos
@@ -209,24 +247,30 @@ export const TableVault = () => {
                     />
                   </td>
                   <td className="p-2 font-medium">{loan.ID}</td>
-                  <td className="p-2">{loan.BorrowerFullName }</td>
+                  <td className="p-2">{loan.BorrowerFullName}</td>
                   <td className="p-2 truncate max-w-[120px] font-mono text-xs" title={loan.TxId}>
                     {loan.TxId ? `${loan.TxId.slice(0, 10)}...${loan.TxId.slice(-8)}` : 'N/A'}
                   </td>
-                  <td className="p-2">{loan.BorrowerPropertyAddress }</td>
-                  <td className="p-2">{loan.BorrowerCity }</td>
-                  <td className="p-2">{loan.BorrowerState }</td>
-                  <td className="p-2">{loan.BorrowerZip }</td>
+                  <td className="p-2">{loan.BorrowerPropertyAddress}</td>
+                  <td className="p-2">{loan.BorrowerCity}</td>
+                  <td className="p-2">{loan.BorrowerState}</td>
+                  <td className="p-2">{loan.BorrowerZip}</td>
                   <td className="p-2 text-right font-semibold">
                     ${formatMoney(Number(loan.CurrentPrincipalBal || 0))}
                   </td>
                   <td className="p-2">
-                    <button
-                      onClick={() => handleOpenModal(loan)}
-                      className="cursor-pointer bg-blue-500 text-white px-4 py-1 rounded-md hover:bg-blue-600 transition"
-                    >
-                      Details
-                    </button>
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        onClick={() => handleOpenModal(loan)}
+                        className="cursor-pointer bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 transition text-sm"
+                      >
+                        Details
+                      </button>
+                      <PublishButton 
+                        loan={loan} 
+                        onClick={() => handleOpenMarketplace(loan)} 
+                      />
+                    </div>
                   </td>
                 </tr>
               ))
@@ -249,6 +293,15 @@ export const TableVault = () => {
           onClose={handleCloseSharedModal}
           selectedLoans={selectedLoansData}
         />
+
+        {/* Modal de marketplace */}
+        {selectedLoanForMarketplace && (
+          <DetailMarketplace
+            isOpen={isMarketplaceModalOpen}
+            onClose={handleCloseMarketplace}
+            loan={selectedLoanForMarketplace}
+          />
+        )}
       </div>
     </div>
   );
