@@ -20,7 +20,7 @@ discovery-enabled=true
 # RPC HTTP (para aplicaciones de Sunwest)
 rpc-http-enabled=true
 rpc-http-host="0.0.0.0"
-rpc-http-port=8551
+rpc-http-port=8059
 rpc-http-api=["ETH","NET","WEB3","TXPOOL","TRACE"]
 rpc-http-cors-origins=["*"]
 rpc-http-max-active-connections=80
@@ -28,7 +28,7 @@ rpc-http-max-active-connections=80
 # RPC WebSocket
 rpc-ws-enabled=true
 rpc-ws-host="0.0.0.0"
-rpc-ws-port=8552
+rpc-ws-port=8060
 rpc-ws-api=["ETH","NET","WEB3"]
 rpc-ws-max-active-connections=80
 

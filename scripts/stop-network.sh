@@ -2,6 +2,7 @@
 
 # Script para detener la red Besu de forma ordenada
 # Uso: ./stop-network.sh
+# NOTA: Este script es independiente de los puertos configurados
 
 set -e
 

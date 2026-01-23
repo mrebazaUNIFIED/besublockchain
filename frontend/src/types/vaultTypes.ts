@@ -14,6 +14,7 @@ export interface CompactLoan {
   TxId: string; 
   NoteRate: number;
   BLOCKAUDITCreationAt: string;
+  isTokenized:boolean
 }
 
 // ==================== FULL LOAN (para detalle completo) ====================
@@ -67,6 +68,10 @@ export interface Loan {
   TxId: string;
   BLOCKAUDITCreationAt: string;
   BLOCKAUDITUpdatedAt: string;
+  isLocked:string;
+  avalancheTokenId:string;
+  lastSyncTimestamp: number;
+  isTokenized:boolean
 }
 
 // ==================== REQUEST/RESPONSE TYPES ====================

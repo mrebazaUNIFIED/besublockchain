@@ -7,27 +7,32 @@ import type { CompactLoan } from "../../../types/vaultTypes";
 import { LoanDetailModal } from "../../Modals/LoanDetailModal";
 import { SharedModal } from "./shared/SharedModal";
 import { DetailMarketplace } from "./marketplace/DetailMarketplace";
-import { useTokenizationStatus } from "../../../services/apiMarketplace";
 
-const PublishButton = ({ loan, onClick }: { loan: CompactLoan; onClick: () => void }) => {
-  const { data: tokenizationStatus, isLoading } = useTokenizationStatus(loan.ID, true);
-  
-  const isTokenized = tokenizationStatus?.isTokenized ;
-  const isDisabled = isLoading || isTokenized;
+const PublishButton = ({
+  loan,
+  onClick
+}: {
+  loan: CompactLoan;
+  onClick: () => void;
+}) => {
+  const isDisabled = loan.isTokenized;
 
   return (
     <button
       onClick={onClick}
       disabled={isDisabled}
-      className={`px-3 py-1 rounded-md transition flex items-center gap-1 text-sm ${
-        isDisabled
+      className={`px-3 py-1 rounded-md transition flex items-center gap-1 text-sm ${isDisabled
           ? "bg-gray-300 text-gray-500 cursor-not-allowed"
           : "bg-green-500 text-white hover:bg-green-600 cursor-pointer"
-      }`}
-      title={isTokenized ? "Already tokenized" : isLoading ? "Loading..." : "Publish to marketplace"}
+        }`}
+      title={
+        isDisabled
+          ? "Already tokenized"
+          : "Publish to marketplace"
+      }
     >
       <Store className="w-4 h-4" />
-      {isTokenized ? "Publish" : "Publish"}
+      {isDisabled ? "Publish" : "Publish"}
     </button>
   );
 };
@@ -44,7 +49,7 @@ export const TableVault = () => {
   const [isSharedModalOpen, setIsSharedModalOpen] = useState(false);
   const [isMarketplaceModalOpen, setIsMarketplaceModalOpen] = useState(false);
   const [selectedLoanForMarketplace, setSelectedLoanForMarketplace] = useState<CompactLoan | null>(null);
-  
+
 
   const statusFilteredLoans =
     loans?.filter((loan: CompactLoan) => {
@@ -223,8 +228,8 @@ export const TableVault = () => {
             ) : !loans || filteredLoans.length === 0 ? (
               <tr>
                 <td colSpan={10} className="text-center p-4 text-gray-600">
-                  {searchTerm || filter !== "All" 
-                    ? "No loans match your filters" 
+                  {searchTerm || filter !== "All"
+                    ? "No loans match your filters"
                     : "No loans available"}
                 </td>
               </tr>
@@ -232,11 +237,10 @@ export const TableVault = () => {
               filteredLoans.map((loan: CompactLoan) => (
                 <tr
                   key={loan.ID}
-                  className={`border-t transition-colors text-center ${
-                    selectedLoans.includes(loan.ID)
+                  className={`border-t transition-colors text-center ${selectedLoans.includes(loan.ID)
                       ? "bg-blue-50"
                       : "hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <td className="p-2">
                     <input
@@ -266,9 +270,9 @@ export const TableVault = () => {
                       >
                         Details
                       </button>
-                      <PublishButton 
-                        loan={loan} 
-                        onClick={() => handleOpenMarketplace(loan)} 
+                      <PublishButton
+                        loan={loan}
+                        onClick={() => handleOpenMarketplace(loan)}
                       />
                     </div>
                   </td>

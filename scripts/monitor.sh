@@ -105,16 +105,16 @@ show_dashboard() {
     printf "%-25s %-8s %-12s %-10s %-15s\n" "NODO" "PUERTO" "BLOCK #" "PEERS" "SYNC STATUS"
     echo "───────────────────────────────────────────────────────────────────────────"
     
-    # Array de nodos y sus puertos RPC
+    # Array de nodos y sus puertos RPC (ACTUALIZADO al rango 8050-8080)
     declare -A node_ports=(
         ["Node-FCI-Boot"]="30303"
-        ["Node-FCI-Val1"]="8545"
-        ["Node-FCI-Val2"]="8553"
-        ["Node-Sunwest-Val1"]="8554"
-        ["Node-Sunwest-Val2"]="8555"
-        ["Node-FCI-RPC1"]="8547"
-        ["Node-FCI-RPC2"]="8549"
-        ["Node-Sunwest-RPC"]="8551"
+        ["Node-FCI-Val1"]="8050"      # era 8545
+        ["Node-FCI-Val2"]="8052"      # era 8553
+        ["Node-Sunwest-Val1"]="8053"  # era 8554
+        ["Node-Sunwest-Val2"]="8054"  # era 8555
+        ["Node-FCI-RPC1"]="8055"      # era 8547
+        ["Node-FCI-RPC2"]="8057"      # era 8549
+        ["Node-Sunwest-RPC"]="8059"   # era 8551
     )
     
     while IFS=: read -r node pid; do
@@ -176,9 +176,9 @@ show_dashboard() {
     echo -e "  ${CYAN}Nodos inactivos:${NC}       ${RED}$((total_nodes - running_nodes))${NC}"
     echo -e "  ${CYAN}Memoria total usada:${NC}   ${YELLOW}${total_mem_mb} MB${NC}"
     
-    # Obtener chain ID del primer nodo disponible
+    # Obtener chain ID del primer nodo disponible (ACTUALIZADO)
     local chain_id="N/A"
-    for port in 8545 8546 8547; do
+    for port in 8050 8052 8053 8055; do  # era 8545 8546 8547
         chain_id=$(get_node_info "$port" "chainId" 2>/dev/null)
         if [ "$chain_id" != "N/A" ] && [ -n "$chain_id" ]; then
             chain_id=$(hex_to_dec "$chain_id")

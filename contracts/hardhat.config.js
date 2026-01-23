@@ -27,7 +27,7 @@ module.exports = {
       chainId: 12345
     },
     besu: {
-      url: "http://localhost:8545",
+      url: "http://localhost:8050",
       accounts: [
         "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63",
       ],

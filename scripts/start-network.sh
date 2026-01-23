@@ -7,18 +7,18 @@ echo -e "${YELLOW}⚠ Limpiando procesos Besu previos y liberando puertos...${NC
 
 PORTS=(
   # Bootnode
-  30303 8545 9545
+  30303 9545
 
-  # Validadores
-  30304 8545 9546
-  30305 8553 9547
-  30308 8554 9550
-  30309 8555 9551
+  # Validadores (P2P + RPC + Métricas)
+  30304 8050 8051 9546
+  30305 8052 9547
+  30308 8053 9550
+  30309 8054 9551
 
   # RPC Nodes
-  30306 8547 8548 9548
-  30307 8549 8550 9549
-  30310 8551 8552 9552
+  30306 8055 8056 9548
+  30307 8057 8058 9549
+  30310 8059 8060 9552
 )
 
 for port in "${PORTS[@]}"; do
@@ -140,16 +140,16 @@ echo -e "${BLUE}FASE 2: Iniciando Validadores (QBFT)${NC}"
 echo -e "${BLUE}═══════════════════════════════════════${NC}\n"
 
 start_node "Node-FCI-Val1" 5
-check_node_services "Node-FCI-Val1" 8545
+check_node_services "Node-FCI-Val1" 8050
 
 start_node "Node-FCI-Val2" 5
-check_node_services "Node-FCI-Val2" 8553
+check_node_services "Node-FCI-Val2" 8052
 
 start_node "Node-Sunwest-Val1" 5
-check_node_services "Node-Sunwest-Val1" 8554
+check_node_services "Node-Sunwest-Val1" 8053
 
 start_node "Node-Sunwest-Val2" 5
-check_node_services "Node-Sunwest-Val2" 8555
+check_node_services "Node-Sunwest-Val2" 8054
 
 echo -e "\n${BLUE}═══════════════════════════════════════${NC}"
 echo -e "${BLUE}Esperando sincronización de validadores...${NC}"
@@ -161,13 +161,13 @@ echo -e "${BLUE}FASE 3: Iniciando Nodos RPC${NC}"
 echo -e "${BLUE}═══════════════════════════════════════${NC}\n"
 
 start_node "Node-FCI-RPC1" 5
-check_node_services "Node-FCI-RPC1" 8547
+check_node_services "Node-FCI-RPC1" 8055
 
 start_node "Node-FCI-RPC2" 5
-check_node_services "Node-FCI-RPC2" 8549
+check_node_services "Node-FCI-RPC2" 8057
 
 start_node "Node-Sunwest-RPC" 5
-check_node_services "Node-Sunwest-RPC" 8551
+check_node_services "Node-Sunwest-RPC" 8059
 
 echo -e "\n${GREEN}═══════════════════════════════════════${NC}"
 echo -e "${GREEN}✓ Red Besu iniciada completamente${NC}"
@@ -187,11 +187,11 @@ echo -e "  ${YELLOW}./scripts/monitor.sh${NC}      - Monitorear la red"
 echo -e "  ${YELLOW}./scripts/stop-network.sh${NC} - Detener la red"
 echo -e "  ${YELLOW}tail -f Nodes/Node-*/besu.log${NC}   - Ver logs en tiempo real"
 
-echo -e "\n${BLUE}Puertos RPC activos:${NC}"
-echo -e "  Node-FCI-Val1:     ${GREEN}http://localhost:8545${NC}"
-echo -e "  Node-FCI-RPC1:     ${GREEN}http://localhost:8547${NC}"
-echo -e "  Node-Sunwest-Val1: ${GREEN}http://localhost:8554${NC}"
-echo -e "  Node-FCI-RPC2:     ${GREEN}http://localhost:8549${NC}"
-echo -e "  Node-Sunwest-Val2: ${GREEN}http://localhost:8555${NC}"
-echo -e "  Node-Sunwest-RPC:  ${GREEN}http://localhost:8551${NC}"
-echo -e "  Node-FCI-Val2:     ${GREEN}http://localhost:8553${NC}\n"
+echo -e "\n${BLUE}Puertos RPC activos (8050-8080):${NC}"
+echo -e "  Node-FCI-Val1:     ${GREEN}http://localhost:8050${NC}"
+echo -e "  Node-FCI-Val2:     ${GREEN}http://localhost:8052${NC}"
+echo -e "  Node-Sunwest-Val1: ${GREEN}http://localhost:8053${NC}"
+echo -e "  Node-Sunwest-Val2: ${GREEN}http://localhost:8054${NC}"
+echo -e "  Node-FCI-RPC1:     ${GREEN}http://localhost:8055${NC} (WS: 8056)"
+echo -e "  Node-FCI-RPC2:     ${GREEN}http://localhost:8057${NC} (WS: 8058)"
+echo -e "  Node-Sunwest-RPC:  ${GREEN}http://localhost:8059${NC} (WS: 8060)\n"

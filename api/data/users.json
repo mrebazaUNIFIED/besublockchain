@@ -4,51 +4,47 @@
     "name": "Sunwest",
     "organization": "Sunwest",
     "role": "admin",
-    "address": "0x3Ff25Cd5Cafd1145B06dDA46B072bDbc12270D45",
-    "privateKey": "0xd6027d6f4607ceb15a74b7c566608b3dfd98a39d00e545196870c7ef58ba843a",
-    "mnemonic": "awkward amazing catalog cereal foil gas promote social rather hold trial error",
-    "passwordHash": "$2b$10$KmDqMuF/V9q9ZvOt2yw0GO9kh50IeBhD8BkZCNQO785uDS7nOjIKu",
+    "address": "0xF20A544DE14e733dc3892F16a58Aa2663618C9F7",
+    "privateKey": "0x67c17e83168902ac72051f99f068ebaf71e6172a20c85dc099a83a92d436f3e1",
+    "mnemonic": "jar cheap exile brown ceiling market case hollow logic zoo mother door",
     "initialBalance": 0,
-    "createdAt": "2026-01-21T18:53:22.212Z",
-    "lastLogin": null
+    "createdAt": "2026-01-23T16:44:16.490Z",
+    "passwordHash": "$2b$10$81hLwnfkmfLQaoSR6AqkMun0CJJM/Powl3B6/UPFYBlqww3I6NtHm"
   },
   "b2c3d4e5-f6a7-4890-1213-141516171819": {
     "userId": "b2c3d4e5-f6a7-4890-1213-141516171819",
     "name": "Mike",
     "organization": "FCI",
     "role": "operator",
-    "address": "0xeBDaAb738e7eddb9342AFa42Ae9Ae59FBd2ff407",
-    "privateKey": "0xeb9e3a09040074310396a46e22ac70c8963f324a28dbe04319e8019fd7173e22",
-    "mnemonic": "warm speed echo rifle boring year shift menu permit walnut multiply next",
-    "passwordHash": "$2b$10$H8VGABtbJVKvDQZZEYlMBuN1CUB29MI8hKZm7UyD4mOED450xTxVe",
+    "address": "0x414114C70A76c13c1FB93f5F92AaA4B1cCBA218b",
+    "privateKey": "0xb423a82121ebc34de077030851ea37b8018de659c5f189ab72b3dc4969994fb5",
+    "mnemonic": "torch helmet avocado rubber deal hobby decorate bread wish mention tumble music",
     "initialBalance": 0,
-    "createdAt": "2026-01-21T18:53:42.432Z",
-    "lastLogin": null
+    "createdAt": "2026-01-23T16:44:39.738Z",
+    "passwordHash": "$2b$10$kgWz9engkD28LgwL2K3YjOXUVRnbQZFOYb4Z5rshADSXaJ9TN9UEq"
   },
   "c3d4e5f6-a7b8-4901-2345-678910111213": {
     "userId": "c3d4e5f6-a7b8-4901-2345-678910111213",
     "name": "FCI Corporate",
     "organization": "FCI",
     "role": "operator",
-    "address": "0x40f8d08940D1408968E1105a8E1237e48af967b1",
-    "privateKey": "0x1dfa6b94aef56f3ea2dbccfdc77d0d9a44445fc417ec6f3f1b426947f27bfc17",
-    "mnemonic": "entry gun soft actor cute fire afraid impose switch ten open when",
-    "passwordHash": "$2b$10$8qq9LFosj06Kzt5ddWFAmOpCP8XYBIvlo4VUBmoq1HeRpLgCp8HJm",
+    "address": "0xa2594374b8CF7Bff7558B86796AE49B7D5011640",
+    "privateKey": "0x51ae4174f35902de8e7b8aac4f60c09bd95b05e8ddb2eec2008cf5370529a477",
+    "mnemonic": "finger firm nature crucial devote bracket genuine diary august media monitor source",
     "initialBalance": 0,
-    "createdAt": "2026-01-21T18:54:02.141Z",
-    "lastLogin": null
+    "createdAt": "2026-01-23T16:44:59.464Z",
+    "passwordHash": "$2b$10$Qa3zwfeLwAuF0du7nsmVXemKDrHjBOpxEdPYoFbTUzQbWnZI9WRgG"
   },
   "98aa2ab88b0e45359129779256d54107": {
     "userId": "98aa2ab88b0e45359129779256d54107",
     "name": "Tim",
     "organization": "FCI",
     "role": "operator",
-    "address": "0x7edA1b1e0B07Fbe7D06E7767054d737F4973D38E",
-    "privateKey": "0xbb54f0224cc59e9717a179209937a6c4f2ccd374f19230eb87fc116a5b1b82da",
-    "mnemonic": "van awake derive arrow boring gorilla fatal pumpkin live track congress moment",
-    "passwordHash": "$2b$10$buq4uO89Qtzc6cWARiFpjeYVpFg2IWrRAPV.iEOjM.NO.zFcFEGUS",
+    "address": "0x45fC43a4f814862d713e819871B6d28cdA8CF06C",
+    "privateKey": "0x15cf5904989d0e30bcb810ba4202ba192cf49a2a44c990350940ea0d0aa360d1",
+    "mnemonic": "choice nasty hammer slide half drill bulk shrimp scheme veteran lion glue",
     "initialBalance": 0,
-    "createdAt": "2026-01-21T18:54:22.314Z",
-    "lastLogin": "2026-01-21T20:13:41.971Z"
+    "createdAt": "2026-01-23T16:45:22.198Z",
+    "passwordHash": "$2b$10$myOjdRnwpftiufUdvfYIQeU/H1D2FprhWBr9Udg9p18XDQRu2whxa"
   }
 }

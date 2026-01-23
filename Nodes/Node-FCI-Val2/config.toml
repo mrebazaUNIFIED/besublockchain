@@ -20,7 +20,7 @@ discovery-enabled=true
 # RPC HTTP (interno, no expuesto externamente en producción)
 rpc-http-enabled=true
 rpc-http-host="127.0.0.1"
-rpc-http-port=8553
+rpc-http-port=8052
 rpc-http-api=["ETH","NET","WEB3","ADMIN","QBFT","TXPOOL"]
 rpc-http-cors-origins=["*"]
 

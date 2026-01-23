@@ -22,14 +22,14 @@ discovery-enabled=true
 # RPC HTTP (para consultas locales y deploy de contratos)
 rpc-http-enabled=true
 rpc-http-host="127.0.0.1"
-rpc-http-port=8545
+rpc-http-port=8050  
 rpc-http-api=["ETH","NET","WEB3","ADMIN","QBFT","TXPOOL","DEBUG"]
 rpc-http-cors-origins=["*"]
 
 # RPC WebSocket
 rpc-ws-enabled=true
 rpc-ws-host="0.0.0.0"
-rpc-ws-port=8546
+rpc-ws-port=8051
 rpc-ws-api=["ETH","NET","WEB3"]
 
 # Logging
