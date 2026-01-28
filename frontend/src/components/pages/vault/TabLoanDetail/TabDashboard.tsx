@@ -139,7 +139,7 @@ export const TabDashboard: React.FC<ModalProps> = ({ loanUid, hash }) => {
       `,
       });
 
-      const response = await fetch("https://tapi.myfci.com/graphql", {
+      const response = await fetch("https://fapi.myfci.com/graphql", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${key}`,

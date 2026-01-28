@@ -54,7 +54,7 @@ export const TabTransaction: React.FC<ModalProps> = ({ loanUid }) => {
             body: graphql,
         };
 
-        const response = await fetch("https://tapi.myfci.com/graphql", requestOptions);
+        const response = await fetch("https://fapi.myfci.com/graphql", requestOptions);
         const result = await response.json();
 
         const loanDetails = result?.data?.getLoanHistoryNew;

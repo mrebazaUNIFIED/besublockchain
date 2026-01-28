@@ -23,6 +23,6 @@ export const RELAYER_CONFIG = {
 };
 
 export const API_CONFIG = {
-  port: parseInt(process.env.API_PORT || '3000'),
+  port: parseInt(process.env.API_PORT || '8070'),
   enabled: process.env.API_ENABLED === 'true'
 };

@@ -58,7 +58,7 @@ export const Vaulting = () => {
       redirect: "follow",
     };
 
-    fetch("https://tapi.myfci.com/graphql", requestOptions)
+    fetch("https://fapi.myfci.com/graphql", requestOptions)
       .then((response) => response.json())
       .then((result) => {
         const ListByState = result?.data?.getLoanListByStateBC;

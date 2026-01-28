@@ -107,7 +107,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8070;
 const server = app.listen(PORT, () => {
   console.log(`\n${'=' .repeat(50)}`);
   console.log(`🚀 BESU API GATEWAY RUNNING`);

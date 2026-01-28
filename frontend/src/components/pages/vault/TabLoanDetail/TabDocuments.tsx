@@ -38,7 +38,7 @@ export const TabDocuments: React.FC<ModalProps> = ({ account }) => {
       body: graphql,
     };
 
-    const response = await fetch("https://tapi.myfci.com/graphql", requestOptions);
+    const response = await fetch("https://fapi.myfci.com/graphql", requestOptions);
     const result = await response.json();
 
     const data = result?.data?.getLoanAttachmentsBC;

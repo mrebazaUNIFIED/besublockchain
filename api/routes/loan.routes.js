@@ -15,9 +15,45 @@ const loanController = require('../controllers/loanController');
 router.get('/', loanController.getAllLoans.bind(loanController));
 
 /**
+ * ✅ POST INTELIGENTE
  * @route   POST /api/loans
- * @desc    Crear un nuevo loan
- * @body    { privateKey, loanData }
+ * @desc    Crear O Actualizar loan (detecta automáticamente)
+ * 
+ * DETECCIÓN AUTOMÁTICA:
+ * 1. Si el loan NO existe → CREAR (requiere todos los campos)
+ * 2. Si el loan existe Y envías ≤10 campos → ACTUALIZACIÓN PARCIAL
+ * 3. Si el loan existe Y envías >10 campos → ACTUALIZACIÓN COMPLETA
+ * 
+ * @body Para CREAR nuevo loan:
+ * {
+ *   "privateKey": "0x...",
+ *   "loanData": {
+ *     "ID": "LOAN001",
+ *     "UserID": "USER001",
+ *     "BorrowerFullName": "John Doe",
+ *     // ... todos los campos requeridos
+ *   }
+ * }
+ * 
+ * @body Para ACTUALIZAR parcialmente (≤10 campos):
+ * {
+ *   "privateKey": "0x...",
+ *   "loanData": {
+ *     "ID": "LOAN001",
+ *     "Status": "Current",
+ *     "DaysSinceLastPymt": 0
+ *   }
+ * }
+ * 
+ * @body Para ACTUALIZAR completamente (>10 campos):
+ * {
+ *   "privateKey": "0x...",
+ *   "loanData": {
+ *     "ID": "LOAN001",
+ *     "UserID": "USER001",
+ *     // ... todos los campos
+ *   }
+ * }
  */
 router.post('/', loanController.createLoan.bind(loanController));
 
@@ -49,13 +85,6 @@ router.get('/tx/:txId', loanController.getLoanByTxId.bind(loanController));
 // ============================================
 
 /**
- * @route   PUT /api/loans/:loanId
- * @desc    Actualizar un loan existente
- * @body    { privateKey, loanData }
- */
-router.put('/:loanId', loanController.updateLoan.bind(loanController));
-
-/**
  * @route   GET /api/loans/:loanId/exists
  * @desc    Verificar si un loan existe
  */
@@ -66,6 +95,22 @@ router.get('/:loanId/exists', loanController.checkLoanExists.bind(loanController
  * @desc    Obtener historial completo de un loan
  */
 router.get('/:loanId/history', loanController.getLoanHistory.bind(loanController));
+
+/**
+ * OPCIONAL: Si alguien quiere usar PATCH explícitamente (mantiene compatibilidad)
+ * @route   PATCH /api/loans/:loanId
+ * @desc    Actualizar un loan parcialmente (forma explícita)
+ * @body    { privateKey, fields: { Status: "Current", ... } }
+ */
+router.patch('/:loanId', loanController.updateLoanPartial.bind(loanController));
+
+/**
+ * OPCIONAL: Si alguien quiere usar PUT explícitamente (mantiene compatibilidad)
+ * @route   PUT /api/loans/:loanId
+ * @desc    Actualizar un loan completo (forma explícita)
+ * @body    { privateKey, loanData: { ID, UserID, ... todos los campos } }
+ */
+router.put('/:loanId', loanController.updateLoan.bind(loanController));
 
 /**
  * @route   DELETE /api/loans/:loanId

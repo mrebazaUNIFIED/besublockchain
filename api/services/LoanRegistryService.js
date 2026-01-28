@@ -89,6 +89,107 @@ class LoanRegistryService extends BaseContractService {
     };
   }
 
+  /**
+   * ✅ NUEVA FUNCIÓN: Actualización parcial de loan
+   * Solo envía los campos que deseas actualizar
+   */
+  async updateLoanPartial(privateKey, loanId, fieldsToUpdate) {
+    const exists = await this.loanExists(loanId);
+    if (!exists) {
+      throw new Error('Loan does not exist');
+    }
+
+    const contract = this.getContract(privateKey);
+
+    // Construir el objeto LoanUpdateFields para el contrato
+    const updateFields = {
+      updateCurrentPrincipalBal: fieldsToUpdate.CurrentPrincipalBal !== undefined,
+      CurrentPrincipalBal: fieldsToUpdate.CurrentPrincipalBal || 0,
+
+      updateUnpaidInterest: fieldsToUpdate.UnpaidInterest !== undefined,
+      UnpaidInterest: fieldsToUpdate.UnpaidInterest || 0,
+
+      updateStatus: fieldsToUpdate.Status !== undefined,
+      Status: fieldsToUpdate.Status || '',
+
+      updateLastPaymentRec: fieldsToUpdate.LastPaymentRec !== undefined,
+      LastPaymentRec: fieldsToUpdate.LastPaymentRec || '',
+
+      updateDaysSinceLastPymt: fieldsToUpdate.DaysSinceLastPymt !== undefined,
+      DaysSinceLastPymt: fieldsToUpdate.DaysSinceLastPymt || 0,
+
+      updateNumOfPymtsDue: fieldsToUpdate.NumOfPymtsDue !== undefined,
+      NumOfPymtsDue: fieldsToUpdate.NumOfPymtsDue || 0,
+
+      updateNextPaymentDue: fieldsToUpdate.NextPaymentDue !== undefined,
+      NextPaymentDue: fieldsToUpdate.NextPaymentDue || '',
+
+      updateUnpaidFees: fieldsToUpdate.UnpaidFees !== undefined,
+      UnpaidFees: fieldsToUpdate.UnpaidFees || 0,
+
+      updateLateFeesAmount: fieldsToUpdate.LateFeesAmount !== undefined,
+      LateFeesAmount: fieldsToUpdate.LateFeesAmount || 0,
+
+      updateNoteRate: fieldsToUpdate.NoteRate !== undefined,
+      NoteRate: fieldsToUpdate.NoteRate || 0,
+
+      updateBorrowerFullName: fieldsToUpdate.BorrowerFullName !== undefined,
+      BorrowerFullName: fieldsToUpdate.BorrowerFullName || '',
+
+      updateBorrowerPropertyAddress: fieldsToUpdate.BorrowerPropertyAddress !== undefined,
+      BorrowerPropertyAddress: fieldsToUpdate.BorrowerPropertyAddress || '',
+
+      updateBorrowerEmail: fieldsToUpdate.BorrowerEmail !== undefined,
+      BorrowerEmail: fieldsToUpdate.BorrowerEmail || '',
+
+      updateBorrowerHomePhone: fieldsToUpdate.BorrowerHomePhone !== undefined,
+      BorrowerHomePhone: fieldsToUpdate.BorrowerHomePhone || '',
+
+      updateBorrowerCity: fieldsToUpdate.BorrowerCity !== undefined,
+      BorrowerCity: fieldsToUpdate.BorrowerCity || '',
+
+      updateBorrowerState: fieldsToUpdate.BorrowerState !== undefined,
+      BorrowerState: fieldsToUpdate.BorrowerState || '',
+
+      updateBorrowerZip: fieldsToUpdate.BorrowerZip !== undefined,
+      BorrowerZip: fieldsToUpdate.BorrowerZip || ''
+    };
+
+    const tx = await contract.updateLoanPartial(loanId, updateFields);
+    const receipt = await tx.wait();
+
+    const event = receipt.logs.find(log => {
+      try {
+        const parsed = contract.interface.parseLog(log);
+        return parsed && parsed.name === 'LoanUpdated';
+      } catch (e) {
+        return false;
+      }
+    });
+
+    let txId = null;
+    let changeCount = 0;
+    if (event) {
+      const parsed = contract.interface.parseLog(event);
+      txId = parsed.args[1];
+      changeCount = Number(parsed.args[2]);
+    }
+
+    return {
+      success: true,
+      txId: txId,
+      loanId: loanId,
+      txHash: receipt.hash,
+      blockNumber: receipt.blockNumber,
+      gasUsed: receipt.gasUsed.toString(),
+      changeCount: changeCount
+    };
+  }
+
+  /**
+   * updateLoan mantiene la funcionalidad original para retrocompatibilidad
+   * Requiere todos los campos
+   */
   async updateLoan(privateKey, loanData) {
     const exists = await this.loanExists(loanData.ID);
     if (!exists) {
@@ -257,7 +358,6 @@ class LoanRegistryService extends BaseContractService {
         gasLimit: 100000000
       });
 
-      // result[0] es el loan, result[1] son los changes
       const loan = result[0];
       const changes = result[1];
 
@@ -333,8 +433,6 @@ class LoanRegistryService extends BaseContractService {
       throw error;
     }
   }
-
-
 
   async deleteLoan(privateKey, loanId) {
     const contract = this.getContract(privateKey);

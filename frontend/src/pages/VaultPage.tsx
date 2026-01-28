@@ -48,7 +48,7 @@ export const VaultPage = () => {
   const validateKeyMutation = useMutation({
     mutationFn: async (key: string) => {
       const response = await axios.post<GraphQLResponse>(
-        'https://tapi.myfci.com/graphql',
+        'https://fapi.myfci.com/graphql',
         {
           query: `{
             getUserInfoWithToken(bcApi:"none")
