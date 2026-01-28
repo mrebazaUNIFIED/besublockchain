@@ -20,6 +20,7 @@ import { WalletVault } from "./components/pages/vault/WalletVault";
 import { SharedLoans } from "./components/pages/vault/SharedLoans";
 import { Explorer } from "./pages/Explorer";
 import { SharedExplorer } from "./components/pages/vault/SharedExplorer";
+import { MarketplaceExplorer } from "./components/pages/vault/MarketplaceExplorer";
 
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({
   children,
@@ -86,6 +87,7 @@ const App: React.FC = () => {
         >
           <Route index element={<Vaulting/>} />
           <Route path="explorer" element={<VaultExplorer />} />
+          <Route path="marketplace" element={<MarketplaceExplorer />} />
           <Route path="portafolio-wallet" element={<WalletVault />} />
           <Route path="my-shared" element={<SharedLoans />} />
         </Route>

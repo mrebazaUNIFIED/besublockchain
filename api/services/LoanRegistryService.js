@@ -8,7 +8,16 @@ class LoanRegistryService extends BaseContractService {
   }
 
   /**
-   * Crear un loan - Usa los nombres EXACTOS del contrato
+   * Helper: Convertir centavos a USD formateado
+   */
+  centsToUSD(cents) {
+    if (!cents) return "0.00";
+    const dollars = Number(cents) / 100;
+    return dollars.toFixed(2);
+  }
+
+  /**
+   * Crear un loan - Números normales (centavos), NO Wei
    */
   async createLoan(privateKey, loanData) {
     const contract = this.getContract(privateKey);
@@ -24,40 +33,40 @@ class LoanRegistryService extends BaseContractService {
       loanData.BorrowerCity,
       loanData.BorrowerEmail,
       loanData.BorrowerOccupancyStatus,
-      loanData.CurrentPrincipalBal,
-      loanData.RestrictedFunds,
-      loanData.SuspenseBalance,
-      loanData.EscrowBalance,
-      loanData.TotalInTrust,
-      loanData.NoteRate,
-      loanData.SoldRate,
-      loanData.DefaultRate,
-      loanData.UnpaidInterest,
-      loanData.UnpaidFees,
-      loanData.LateFeesAmount,
-      loanData.UnpaidLateFees,
-      loanData.AccruedLateFees,
-      loanData.UnpaidLoanCharges,
-      loanData.DeferredPrincBalance,
-      loanData.DeferredUnpCharges,
-      loanData.OriginalLoanAmount,
+      BigInt(loanData.CurrentPrincipalBal || 0),
+      BigInt(loanData.RestrictedFunds || 0),
+      BigInt(loanData.SuspenseBalance || 0),
+      BigInt(loanData.EscrowBalance || 0),
+      BigInt(loanData.TotalInTrust || 0),
+      loanData.NoteRate || 0,
+      loanData.SoldRate || 0,
+      loanData.DefaultRate || 0,
+      BigInt(loanData.UnpaidInterest || 0),
+      BigInt(loanData.UnpaidFees || 0),
+      BigInt(loanData.LateFeesAmount || 0),
+      BigInt(loanData.UnpaidLateFees || 0),
+      BigInt(loanData.AccruedLateFees || 0),
+      BigInt(loanData.UnpaidLoanCharges || 0),
+      BigInt(loanData.DeferredPrincBalance || 0),
+      BigInt(loanData.DeferredUnpCharges || 0),
+      BigInt(loanData.OriginalLoanAmount || 0),
       loanData.OriginationDate,
       loanData.NextPaymentDue,
       loanData.LoanMaturityDate,
       loanData.LastPaymentRec,
       loanData.InterestPaidTo,
-      loanData.DeferredUnpaidInt,
-      loanData.FCIRestrictedPrincipal,
-      loanData.FCIRestrictedInterest,
-      loanData.PymtGraceDays,
-      loanData.DaysSinceLastPymt,
-      loanData.NumOfPymtsDue,
-      loanData.ScheduledPayment,
-      loanData.PromisesToPay,
-      loanData.NFSInLast12Months,
-      loanData.DeferredLateFees,
-      loanData.InvestorRestrictedPrincipal,
-      loanData.InvestorRestrictedInterest,
+      BigInt(loanData.DeferredUnpaidInt || 0),
+      BigInt(loanData.FCIRestrictedPrincipal || 0),
+      BigInt(loanData.FCIRestrictedInterest || 0),
+      loanData.PymtGraceDays || 0,
+      loanData.DaysSinceLastPymt || 0,
+      loanData.NumOfPymtsDue || 0,
+      BigInt(loanData.ScheduledPayment || 0),
+      loanData.PromisesToPay || 0,
+      loanData.NFSInLast12Months || 0,
+      BigInt(loanData.DeferredLateFees || 0),
+      BigInt(loanData.InvestorRestrictedPrincipal || 0),
+      BigInt(loanData.InvestorRestrictedInterest || 0),
       loanData.Status,
       loanData.LUid
     );
@@ -90,8 +99,7 @@ class LoanRegistryService extends BaseContractService {
   }
 
   /**
-   * ✅ NUEVA FUNCIÓN: Actualización parcial de loan
-   * Solo envía los campos que deseas actualizar
+   * Actualización parcial - Números normales (centavos)
    */
   async updateLoanPartial(privateKey, loanId, fieldsToUpdate) {
     const exists = await this.loanExists(loanId);
@@ -101,13 +109,16 @@ class LoanRegistryService extends BaseContractService {
 
     const contract = this.getContract(privateKey);
 
-    // Construir el objeto LoanUpdateFields para el contrato
     const updateFields = {
       updateCurrentPrincipalBal: fieldsToUpdate.CurrentPrincipalBal !== undefined,
-      CurrentPrincipalBal: fieldsToUpdate.CurrentPrincipalBal || 0,
+      CurrentPrincipalBal: fieldsToUpdate.CurrentPrincipalBal
+        ? BigInt(fieldsToUpdate.CurrentPrincipalBal)
+        : BigInt(0),
 
       updateUnpaidInterest: fieldsToUpdate.UnpaidInterest !== undefined,
-      UnpaidInterest: fieldsToUpdate.UnpaidInterest || 0,
+      UnpaidInterest: fieldsToUpdate.UnpaidInterest
+        ? BigInt(fieldsToUpdate.UnpaidInterest)
+        : BigInt(0),
 
       updateStatus: fieldsToUpdate.Status !== undefined,
       Status: fieldsToUpdate.Status || '',
@@ -125,10 +136,14 @@ class LoanRegistryService extends BaseContractService {
       NextPaymentDue: fieldsToUpdate.NextPaymentDue || '',
 
       updateUnpaidFees: fieldsToUpdate.UnpaidFees !== undefined,
-      UnpaidFees: fieldsToUpdate.UnpaidFees || 0,
+      UnpaidFees: fieldsToUpdate.UnpaidFees
+        ? BigInt(fieldsToUpdate.UnpaidFees)
+        : BigInt(0),
 
       updateLateFeesAmount: fieldsToUpdate.LateFeesAmount !== undefined,
-      LateFeesAmount: fieldsToUpdate.LateFeesAmount || 0,
+      LateFeesAmount: fieldsToUpdate.LateFeesAmount
+        ? BigInt(fieldsToUpdate.LateFeesAmount)
+        : BigInt(0),
 
       updateNoteRate: fieldsToUpdate.NoteRate !== undefined,
       NoteRate: fieldsToUpdate.NoteRate || 0,
@@ -186,10 +201,6 @@ class LoanRegistryService extends BaseContractService {
     };
   }
 
-  /**
-   * updateLoan mantiene la funcionalidad original para retrocompatibilidad
-   * Requiere todos los campos
-   */
   async updateLoan(privateKey, loanData) {
     const exists = await this.loanExists(loanData.ID);
     if (!exists) {
@@ -198,6 +209,9 @@ class LoanRegistryService extends BaseContractService {
     return await this.createLoan(privateKey, loanData);
   }
 
+  /**
+   * ✅ Leer loan - Devuelve valores en USD
+   */
   async readLoan(loanId) {
     const contract = this.getContractReadOnly();
     const loan = await contract.readLoan(loanId, {
@@ -215,40 +229,41 @@ class LoanRegistryService extends BaseContractService {
       BorrowerCity: loan.BorrowerCity,
       BorrowerEmail: loan.BorrowerEmail,
       BorrowerOccupancyStatus: loan.BorrowerOccupancyStatus,
-      CurrentPrincipalBal: ethers.formatEther(loan.CurrentPrincipalBal),
-      RestrictedFunds: ethers.formatEther(loan.RestrictedFunds),
-      SuspenseBalance: ethers.formatEther(loan.SuspenseBalance),
-      EscrowBalance: ethers.formatEther(loan.EscrowBalance),
-      TotalInTrust: ethers.formatEther(loan.TotalInTrust),
+      // ✅ Convertir centavos a USD
+      CurrentPrincipalBal: this.centsToUSD(loan.CurrentPrincipalBal),
+      RestrictedFunds: this.centsToUSD(loan.RestrictedFunds),
+      SuspenseBalance: this.centsToUSD(loan.SuspenseBalance),
+      EscrowBalance: this.centsToUSD(loan.EscrowBalance),
+      TotalInTrust: this.centsToUSD(loan.TotalInTrust),
       NoteRate: Number(loan.NoteRate),
       SoldRate: Number(loan.SoldRate),
       DefaultRate: Number(loan.DefaultRate),
-      UnpaidInterest: ethers.formatEther(loan.UnpaidInterest),
-      UnpaidFees: ethers.formatEther(loan.UnpaidFees),
-      LateFeesAmount: ethers.formatEther(loan.LateFeesAmount),
-      UnpaidLateFees: ethers.formatEther(loan.UnpaidLateFees),
-      AccruedLateFees: ethers.formatEther(loan.AccruedLateFees),
-      UnpaidLoanCharges: ethers.formatEther(loan.UnpaidLoanCharges),
-      DeferredPrincBalance: ethers.formatEther(loan.DeferredPrincBalance),
-      DeferredUnpCharges: ethers.formatEther(loan.DeferredUnpCharges),
-      OriginalLoanAmount: ethers.formatEther(loan.OriginalLoanAmount),
+      UnpaidInterest: this.centsToUSD(loan.UnpaidInterest),
+      UnpaidFees: this.centsToUSD(loan.UnpaidFees),
+      LateFeesAmount: this.centsToUSD(loan.LateFeesAmount),
+      UnpaidLateFees: this.centsToUSD(loan.UnpaidLateFees),
+      AccruedLateFees: this.centsToUSD(loan.AccruedLateFees),
+      UnpaidLoanCharges: this.centsToUSD(loan.UnpaidLoanCharges),
+      DeferredPrincBalance: this.centsToUSD(loan.DeferredPrincBalance),
+      DeferredUnpCharges: this.centsToUSD(loan.DeferredUnpCharges),
+      OriginalLoanAmount: this.centsToUSD(loan.OriginalLoanAmount),
       OriginationDate: loan.OriginationDate,
       NextPaymentDue: loan.NextPaymentDue,
       LoanMaturityDate: loan.LoanMaturityDate,
       LastPaymentRec: loan.LastPaymentRec,
       InterestPaidTo: loan.InterestPaidTo,
-      DeferredUnpaidInt: ethers.formatEther(loan.DeferredUnpaidInt),
-      FCIRestrictedPrincipal: ethers.formatEther(loan.FCIRestrictedPrincipal),
-      FCIRestrictedInterest: ethers.formatEther(loan.FCIRestrictedInterest),
+      DeferredUnpaidInt: this.centsToUSD(loan.DeferredUnpaidInt),
+      FCIRestrictedPrincipal: this.centsToUSD(loan.FCIRestrictedPrincipal),
+      FCIRestrictedInterest: this.centsToUSD(loan.FCIRestrictedInterest),
       PymtGraceDays: Number(loan.PymtGraceDays),
       DaysSinceLastPymt: Number(loan.DaysSinceLastPymt),
       NumOfPymtsDue: Number(loan.NumOfPymtsDue),
-      ScheduledPayment: ethers.formatEther(loan.ScheduledPayment),
+      ScheduledPayment: this.centsToUSD(loan.ScheduledPayment),
       PromisesToPay: Number(loan.PromisesToPay),
       NFSInLast12Months: Number(loan.NFSInLast12Months),
-      DeferredLateFees: ethers.formatEther(loan.DeferredLateFees),
-      InvestorRestrictedPrincipal: ethers.formatEther(loan.InvestorRestrictedPrincipal),
-      InvestorRestrictedInterest: ethers.formatEther(loan.InvestorRestrictedInterest),
+      DeferredLateFees: this.centsToUSD(loan.DeferredLateFees),
+      InvestorRestrictedPrincipal: this.centsToUSD(loan.InvestorRestrictedPrincipal),
+      InvestorRestrictedInterest: this.centsToUSD(loan.InvestorRestrictedInterest),
       Status: loan.Status,
       LUid: loan.LUid,
       TxId: loan.TxId,
@@ -261,6 +276,9 @@ class LoanRegistryService extends BaseContractService {
     };
   }
 
+  /**
+   * ✅ Buscar loans por userId - Devuelve valores en USD
+   */
   async findLoansByUserId(userId) {
     const contract = this.getContractReadOnly();
     const loans = await contract.findLoansByUserId(userId, {
@@ -279,40 +297,41 @@ class LoanRegistryService extends BaseContractService {
       BorrowerCity: loan.BorrowerCity,
       BorrowerEmail: loan.BorrowerEmail,
       BorrowerOccupancyStatus: loan.BorrowerOccupancyStatus,
-      CurrentPrincipalBal: ethers.formatEther(loan.CurrentPrincipalBal),
-      RestrictedFunds: ethers.formatEther(loan.RestrictedFunds),
-      SuspenseBalance: ethers.formatEther(loan.SuspenseBalance),
-      EscrowBalance: ethers.formatEther(loan.EscrowBalance),
-      TotalInTrust: ethers.formatEther(loan.TotalInTrust),
+      // ✅ Convertir centavos a USD
+      CurrentPrincipalBal: this.centsToUSD(loan.CurrentPrincipalBal),
+      RestrictedFunds: this.centsToUSD(loan.RestrictedFunds),
+      SuspenseBalance: this.centsToUSD(loan.SuspenseBalance),
+      EscrowBalance: this.centsToUSD(loan.EscrowBalance),
+      TotalInTrust: this.centsToUSD(loan.TotalInTrust),
       NoteRate: Number(loan.NoteRate),
       SoldRate: Number(loan.SoldRate),
       DefaultRate: Number(loan.DefaultRate),
-      UnpaidInterest: ethers.formatEther(loan.UnpaidInterest),
-      UnpaidFees: ethers.formatEther(loan.UnpaidFees),
-      LateFeesAmount: ethers.formatEther(loan.LateFeesAmount),
-      UnpaidLateFees: ethers.formatEther(loan.UnpaidLateFees),
-      AccruedLateFees: ethers.formatEther(loan.AccruedLateFees),
-      UnpaidLoanCharges: ethers.formatEther(loan.UnpaidLoanCharges),
-      DeferredPrincBalance: ethers.formatEther(loan.DeferredPrincBalance),
-      DeferredUnpCharges: ethers.formatEther(loan.DeferredUnpCharges),
-      OriginalLoanAmount: ethers.formatEther(loan.OriginalLoanAmount),
+      UnpaidInterest: this.centsToUSD(loan.UnpaidInterest),
+      UnpaidFees: this.centsToUSD(loan.UnpaidFees),
+      LateFeesAmount: this.centsToUSD(loan.LateFeesAmount),
+      UnpaidLateFees: this.centsToUSD(loan.UnpaidLateFees),
+      AccruedLateFees: this.centsToUSD(loan.AccruedLateFees),
+      UnpaidLoanCharges: this.centsToUSD(loan.UnpaidLoanCharges),
+      DeferredPrincBalance: this.centsToUSD(loan.DeferredPrincBalance),
+      DeferredUnpCharges: this.centsToUSD(loan.DeferredUnpCharges),
+      OriginalLoanAmount: this.centsToUSD(loan.OriginalLoanAmount),
       OriginationDate: loan.OriginationDate,
       NextPaymentDue: loan.NextPaymentDue,
       LoanMaturityDate: loan.LoanMaturityDate,
       LastPaymentRec: loan.LastPaymentRec,
       InterestPaidTo: loan.InterestPaidTo,
-      DeferredUnpaidInt: ethers.formatEther(loan.DeferredUnpaidInt),
-      FCIRestrictedPrincipal: ethers.formatEther(loan.FCIRestrictedPrincipal),
-      FCIRestrictedInterest: ethers.formatEther(loan.FCIRestrictedInterest),
+      DeferredUnpaidInt: this.centsToUSD(loan.DeferredUnpaidInt),
+      FCIRestrictedPrincipal: this.centsToUSD(loan.FCIRestrictedPrincipal),
+      FCIRestrictedInterest: this.centsToUSD(loan.FCIRestrictedInterest),
       PymtGraceDays: Number(loan.PymtGraceDays),
       DaysSinceLastPymt: Number(loan.DaysSinceLastPymt),
       NumOfPymtsDue: Number(loan.NumOfPymtsDue),
-      ScheduledPayment: ethers.formatEther(loan.ScheduledPayment),
+      ScheduledPayment: this.centsToUSD(loan.ScheduledPayment),
       PromisesToPay: Number(loan.PromisesToPay),
       NFSInLast12Months: Number(loan.NFSInLast12Months),
-      DeferredLateFees: ethers.formatEther(loan.DeferredLateFees),
-      InvestorRestrictedPrincipal: ethers.formatEther(loan.InvestorRestrictedPrincipal),
-      InvestorRestrictedInterest: ethers.formatEther(loan.InvestorRestrictedInterest),
+      DeferredLateFees: this.centsToUSD(loan.DeferredLateFees),
+      InvestorRestrictedPrincipal: this.centsToUSD(loan.InvestorRestrictedPrincipal),
+      InvestorRestrictedInterest: this.centsToUSD(loan.InvestorRestrictedInterest),
       Status: loan.Status,
       TxId: loan.TxId,
       BLOCKAUDITCreationAt: new Date(Number(loan.BLOCKAUDITCreationAt) * 1000),
@@ -350,6 +369,9 @@ class LoanRegistryService extends BaseContractService {
     return history;
   }
 
+  /**
+   * ✅ Obtener loan por TxId - Devuelve valores en USD
+   */
   async getLoanByTxId(txId) {
     const contract = this.getContractReadOnly();
 
@@ -374,40 +396,41 @@ class LoanRegistryService extends BaseContractService {
           BorrowerCity: loan.BorrowerCity,
           BorrowerEmail: loan.BorrowerEmail,
           BorrowerOccupancyStatus: loan.BorrowerOccupancyStatus,
-          CurrentPrincipalBal: ethers.formatEther(loan.CurrentPrincipalBal),
-          RestrictedFunds: ethers.formatEther(loan.RestrictedFunds),
-          SuspenseBalance: ethers.formatEther(loan.SuspenseBalance),
-          EscrowBalance: ethers.formatEther(loan.EscrowBalance),
-          TotalInTrust: ethers.formatEther(loan.TotalInTrust),
+          // ✅ Convertir centavos a USD
+          CurrentPrincipalBal: this.centsToUSD(loan.CurrentPrincipalBal),
+          RestrictedFunds: this.centsToUSD(loan.RestrictedFunds),
+          SuspenseBalance: this.centsToUSD(loan.SuspenseBalance),
+          EscrowBalance: this.centsToUSD(loan.EscrowBalance),
+          TotalInTrust: this.centsToUSD(loan.TotalInTrust),
           NoteRate: Number(loan.NoteRate),
           SoldRate: Number(loan.SoldRate),
           DefaultRate: Number(loan.DefaultRate),
-          UnpaidInterest: ethers.formatEther(loan.UnpaidInterest),
-          UnpaidFees: ethers.formatEther(loan.UnpaidFees),
-          LateFeesAmount: ethers.formatEther(loan.LateFeesAmount),
-          UnpaidLateFees: ethers.formatEther(loan.UnpaidLateFees),
-          AccruedLateFees: ethers.formatEther(loan.AccruedLateFees),
-          UnpaidLoanCharges: ethers.formatEther(loan.UnpaidLoanCharges),
-          DeferredPrincBalance: ethers.formatEther(loan.DeferredPrincBalance),
-          DeferredUnpCharges: ethers.formatEther(loan.DeferredUnpCharges),
-          OriginalLoanAmount: ethers.formatEther(loan.OriginalLoanAmount),
+          UnpaidInterest: this.centsToUSD(loan.UnpaidInterest),
+          UnpaidFees: this.centsToUSD(loan.UnpaidFees),
+          LateFeesAmount: this.centsToUSD(loan.LateFeesAmount),
+          UnpaidLateFees: this.centsToUSD(loan.UnpaidLateFees),
+          AccruedLateFees: this.centsToUSD(loan.AccruedLateFees),
+          UnpaidLoanCharges: this.centsToUSD(loan.UnpaidLoanCharges),
+          DeferredPrincBalance: this.centsToUSD(loan.DeferredPrincBalance),
+          DeferredUnpCharges: this.centsToUSD(loan.DeferredUnpCharges),
+          OriginalLoanAmount: this.centsToUSD(loan.OriginalLoanAmount),
           OriginationDate: loan.OriginationDate,
           NextPaymentDue: loan.NextPaymentDue,
           LoanMaturityDate: loan.LoanMaturityDate,
           LastPaymentRec: loan.LastPaymentRec,
           InterestPaidTo: loan.InterestPaidTo,
-          DeferredUnpaidInt: ethers.formatEther(loan.DeferredUnpaidInt),
-          FCIRestrictedPrincipal: ethers.formatEther(loan.FCIRestrictedPrincipal),
-          FCIRestrictedInterest: ethers.formatEther(loan.FCIRestrictedInterest),
+          DeferredUnpaidInt: this.centsToUSD(loan.DeferredUnpaidInt),
+          FCIRestrictedPrincipal: this.centsToUSD(loan.FCIRestrictedPrincipal),
+          FCIRestrictedInterest: this.centsToUSD(loan.FCIRestrictedInterest),
           PymtGraceDays: Number(loan.PymtGraceDays),
           DaysSinceLastPymt: Number(loan.DaysSinceLastPymt),
           NumOfPymtsDue: Number(loan.NumOfPymtsDue),
-          ScheduledPayment: ethers.formatEther(loan.ScheduledPayment),
+          ScheduledPayment: this.centsToUSD(loan.ScheduledPayment),
           PromisesToPay: Number(loan.PromisesToPay),
           NFSInLast12Months: Number(loan.NFSInLast12Months),
-          DeferredLateFees: ethers.formatEther(loan.DeferredLateFees),
-          InvestorRestrictedPrincipal: ethers.formatEther(loan.InvestorRestrictedPrincipal),
-          InvestorRestrictedInterest: ethers.formatEther(loan.InvestorRestrictedInterest),
+          DeferredLateFees: this.centsToUSD(loan.DeferredLateFees),
+          InvestorRestrictedPrincipal: this.centsToUSD(loan.InvestorRestrictedPrincipal),
+          InvestorRestrictedInterest: this.centsToUSD(loan.InvestorRestrictedInterest),
           Status: loan.Status,
           TxId: loan.TxId,
           BLOCKAUDITCreationAt: new Date(Number(loan.BLOCKAUDITCreationAt) * 1000),
@@ -454,6 +477,9 @@ class LoanRegistryService extends BaseContractService {
     });
   }
 
+  /**
+   * ✅ Query loans paginado - Devuelve valores en USD
+   */
   async queryAllLoans(offset = 0, limit = 50) {
     const contract = this.getContractReadOnly();
 
@@ -474,40 +500,41 @@ class LoanRegistryService extends BaseContractService {
         BorrowerCity: loan.BorrowerCity,
         BorrowerEmail: loan.BorrowerEmail,
         BorrowerOccupancyStatus: loan.BorrowerOccupancyStatus,
-        CurrentPrincipalBal: ethers.formatEther(loan.CurrentPrincipalBal),
-        RestrictedFunds: ethers.formatEther(loan.RestrictedFunds),
-        SuspenseBalance: ethers.formatEther(loan.SuspenseBalance),
-        EscrowBalance: ethers.formatEther(loan.EscrowBalance),
-        TotalInTrust: ethers.formatEther(loan.TotalInTrust),
+        // ✅ Convertir centavos a USD
+        CurrentPrincipalBal: this.centsToUSD(loan.CurrentPrincipalBal),
+        RestrictedFunds: this.centsToUSD(loan.RestrictedFunds),
+        SuspenseBalance: this.centsToUSD(loan.SuspenseBalance),
+        EscrowBalance: this.centsToUSD(loan.EscrowBalance),
+        TotalInTrust: this.centsToUSD(loan.TotalInTrust),
         NoteRate: Number(loan.NoteRate),
         SoldRate: Number(loan.SoldRate),
         DefaultRate: Number(loan.DefaultRate),
-        UnpaidInterest: ethers.formatEther(loan.UnpaidInterest),
-        UnpaidFees: ethers.formatEther(loan.UnpaidFees),
-        LateFeesAmount: ethers.formatEther(loan.LateFeesAmount),
-        UnpaidLateFees: ethers.formatEther(loan.UnpaidLateFees),
-        AccruedLateFees: ethers.formatEther(loan.AccruedLateFees),
-        UnpaidLoanCharges: ethers.formatEther(loan.UnpaidLoanCharges),
-        DeferredPrincBalance: ethers.formatEther(loan.DeferredPrincBalance),
-        DeferredUnpCharges: ethers.formatEther(loan.DeferredUnpCharges),
-        OriginalLoanAmount: ethers.formatEther(loan.OriginalLoanAmount),
+        UnpaidInterest: this.centsToUSD(loan.UnpaidInterest),
+        UnpaidFees: this.centsToUSD(loan.UnpaidFees),
+        LateFeesAmount: this.centsToUSD(loan.LateFeesAmount),
+        UnpaidLateFees: this.centsToUSD(loan.UnpaidLateFees),
+        AccruedLateFees: this.centsToUSD(loan.AccruedLateFees),
+        UnpaidLoanCharges: this.centsToUSD(loan.UnpaidLoanCharges),
+        DeferredPrincBalance: this.centsToUSD(loan.DeferredPrincBalance),
+        DeferredUnpCharges: this.centsToUSD(loan.DeferredUnpCharges),
+        OriginalLoanAmount: this.centsToUSD(loan.OriginalLoanAmount),
         OriginationDate: loan.OriginationDate,
         NextPaymentDue: loan.NextPaymentDue,
         LoanMaturityDate: loan.LoanMaturityDate,
         LastPaymentRec: loan.LastPaymentRec,
         InterestPaidTo: loan.InterestPaidTo,
-        DeferredUnpaidInt: ethers.formatEther(loan.DeferredUnpaidInt),
-        FCIRestrictedPrincipal: ethers.formatEther(loan.FCIRestrictedPrincipal),
-        FCIRestrictedInterest: ethers.formatEther(loan.FCIRestrictedInterest),
+        DeferredUnpaidInt: this.centsToUSD(loan.DeferredUnpaidInt),
+        FCIRestrictedPrincipal: this.centsToUSD(loan.FCIRestrictedPrincipal),
+        FCIRestrictedInterest: this.centsToUSD(loan.FCIRestrictedInterest),
         PymtGraceDays: Number(loan.PymtGraceDays),
         DaysSinceLastPymt: Number(loan.DaysSinceLastPymt),
         NumOfPymtsDue: Number(loan.NumOfPymtsDue),
-        ScheduledPayment: ethers.formatEther(loan.ScheduledPayment),
+        ScheduledPayment: this.centsToUSD(loan.ScheduledPayment),
         PromisesToPay: Number(loan.PromisesToPay),
         NFSInLast12Months: Number(loan.NFSInLast12Months),
-        DeferredLateFees: ethers.formatEther(loan.DeferredLateFees),
-        InvestorRestrictedPrincipal: ethers.formatEther(loan.InvestorRestrictedPrincipal),
-        InvestorRestrictedInterest: ethers.formatEther(loan.InvestorRestrictedInterest),
+        DeferredLateFees: this.centsToUSD(loan.DeferredLateFees),
+        InvestorRestrictedPrincipal: this.centsToUSD(loan.InvestorRestrictedPrincipal),
+        InvestorRestrictedInterest: this.centsToUSD(loan.InvestorRestrictedInterest),
         Status: loan.Status,
         TxId: loan.TxId,
         BLOCKAUDITCreationAt: new Date(Number(loan.BLOCKAUDITCreationAt) * 1000),
@@ -541,7 +568,7 @@ class LoanRegistryService extends BaseContractService {
         BorrowerCity: loan.BorrowerCity,
         BorrowerState: loan.BorrowerState,
         BorrowerZip: loan.BorrowerZip,
-        CurrentPrincipalBal: ethers.formatEther(loan.CurrentPrincipalBal),
+        CurrentPrincipalBal: this.centsToUSD(loan.CurrentPrincipalBal),
         UserID: loan.UserID,
         Status: loan.Status,
         BLOCKAUDITCreationAt: new Date(Number(loan.BLOCKAUDITCreationAt) * 1000),

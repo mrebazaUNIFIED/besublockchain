@@ -9,6 +9,7 @@ import React from "react";
 import { UserCardVault } from "../components/ui/LogoutOption-vault";
 import { CiSearch } from "react-icons/ci";
 import {  Share2 } from "lucide-react";
+import { TbBuildingStore } from "react-icons/tb";
 
 export function VaultDashboardPage() {
   const [open, setOpen] = useState(false);
@@ -23,6 +24,11 @@ export function VaultDashboardPage() {
       label: "Vault Explorer",
       href: "/vaulting/explorer",
       icon: <CiSearch className="h-5 w-5 shrink-0" />,
+    },
+    {
+      label: "Marketplace Explorer",
+      href: "/vaulting/marketplace",
+      icon: <TbBuildingStore className="h-5 w-5 shrink-0" />,
     },
     {
       label: "Wallet - Portafolio Certificate",

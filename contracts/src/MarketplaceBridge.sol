@@ -18,12 +18,15 @@ contract MarketplaceBridge is Ownable {
         uint256 modifiedInterestRate;
         address lenderAddress;
         uint256 approvalTimestamp;
-        bool isMinted; // true cuando el NFT fue minteado
-        bool isCancelled; // true si se canceló antes de mintear
+        bool isMinted;
+        bool isCancelled;
     }
 
     mapping(string => ApprovalData) public loanApprovals;
     mapping(string => uint256) public loanToAvalancheTokenId;
+    
+    // ✅ NUEVO: Mapping de txHash a loanId
+    mapping(bytes32 => string) public txHashToLoanId;
 
     // ===== EVENTOS =====
     event LoanApprovedForSale(
@@ -145,6 +148,35 @@ contract MarketplaceBridge is Ownable {
         return true;
     }
 
+    // ✅ NUEVA FUNCIÓN: Registrar el txHash después de la aprobación
+    function registerApprovalTxHash(
+        string memory loanId,
+        bytes32 txHash
+    ) external onlyRelayer returns (bool) {
+        require(loanApprovals[loanId].isApproved, "Loan not approved");
+        require(txHash != bytes32(0), "Invalid txHash");
+        
+        txHashToLoanId[txHash] = loanId;
+        return true;
+    }
+
+    // ✅ NUEVA FUNCIÓN: Obtener loanId desde txHash
+    function getLoanIdByTxHash(
+        bytes32 txHash
+    ) public view returns (string memory) {
+        return txHashToLoanId[txHash];
+    }
+
+    // ✅ NUEVA FUNCIÓN: Obtener ApprovalData por txHash
+    function getApprovalDataByTxHash(
+        bytes32 txHash
+    ) public view returns (ApprovalData memory, string memory) {
+        string memory loanId = txHashToLoanId[txHash];
+        require(bytes(loanId).length > 0, "TxHash not found");
+        
+        return (loanApprovals[loanId], loanId);
+    }
+
     // ===== CANCELAR APROBACIÓN =====
     function cancelSaleListing(
         string memory loanId
@@ -155,11 +187,9 @@ contract MarketplaceBridge is Ownable {
         require(!approval.isMinted, "NFT already minted, cannot cancel");
         require(!approval.isCancelled, "Already cancelled");
 
-        // ✅ FIX: Marcar como cancelado ANTES de desbloquear (previene race condition)
         approval.isCancelled = true;
         approval.isApproved = false;
 
-        // Desbloquear el loan
         require(loanRegistry.unlockLoan(loanId), "Failed to unlock loan");
 
         emit LoanApprovalCancelled(loanId, msg.sender, block.timestamp);
@@ -167,10 +197,6 @@ contract MarketplaceBridge is Ownable {
     }
 
     // ===== FUNCIONES DEL RELAYER =====
-
-    /**
-     * @dev El relayer llama esta función cuando el NFT fue minteado en Avalanche
-     */
     function setAvalancheTokenId(
         string memory loanId,
         uint256 tokenId
@@ -181,15 +207,11 @@ contract MarketplaceBridge is Ownable {
         require(!approval.isCancelled, "Approval was cancelled");
         require(!approval.isMinted, "Already minted");
         require(tokenId > 0, "Invalid token ID");
-
-        // ✅ Verificar que el loan sigue bloqueado
         require(loanRegistry.isLoanLocked(loanId), "Loan is not locked");
 
-        // Actualizar estado
         approval.isMinted = true;
         loanToAvalancheTokenId[loanId] = tokenId;
 
-        // Guardar tokenId en LoanRegistry
         require(
             loanRegistry.setAvalancheTokenId(loanId, tokenId),
             "Failed to set token ID"
@@ -199,9 +221,6 @@ contract MarketplaceBridge is Ownable {
         return true;
     }
 
-    /**
-     * @dev El relayer llama esta función cuando alguien compra el NFT
-     */
     function recordOwnershipTransfer(
         string memory loanId,
         address newOwnerAddress,
@@ -221,9 +240,6 @@ contract MarketplaceBridge is Ownable {
         return true;
     }
 
-    /**
-     * @dev El relayer llama esta función cuando el borrower hace un pago
-     */
     function recordPayment(
         string memory loanId,
         uint256 amount
@@ -235,17 +251,12 @@ contract MarketplaceBridge is Ownable {
         return true;
     }
 
-    /**
-     * @dev El relayer llama esta función cuando un loan se paga completamente
-     * Avalanche debe escuchar este evento para quemar o "freeze" el NFT
-     */
     function markLoanAsPaidOff(
         string memory loanId
     ) external onlyRelayer returns (bool) {
         require(loanRegistry.loanExists(loanId), "Loan does not exist");
         require(loanApprovals[loanId].isMinted, "Not minted");
 
-        // Opcional: Validar que el loan realmente esté pagado
         LoanRegistry.Loan memory loan = loanRegistry.readLoan(loanId);
         require(
             keccak256(bytes(loan.Status)) == keccak256(bytes("Paid Off")),
@@ -289,10 +300,6 @@ contract MarketplaceBridge is Ownable {
     }
 
     // ===== FUNCIÓN DE EMERGENCIA =====
-    /**
-     * @dev Owner puede forzar unlock en caso de emergencia
-     * (Ej: Si el relayer falla y el NFT nunca se mintea)
-     */
     function emergencyUnlock(
         string memory loanId
     ) external onlyOwner returns (bool) {
@@ -301,7 +308,6 @@ contract MarketplaceBridge is Ownable {
         require(approval.isApproved, "Not approved");
         require(!approval.isMinted, "NFT already minted");
 
-        // ✅ FIX BUG #4: Guardar tokenId ANTES de cancelar
         uint256 tokenIdBeforeUnlock = loanToAvalancheTokenId[loanId];
 
         approval.isCancelled = true;
@@ -315,7 +321,6 @@ contract MarketplaceBridge is Ownable {
             block.timestamp
         );
 
-        // ✅ FIX BUG #4: Si el NFT fue minteado, emitir evento para el relayer
         if (tokenIdBeforeUnlock > 0) {
             emit EmergencyUnlockNeedsSync(
                 loanId,
