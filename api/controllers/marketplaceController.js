@@ -153,8 +153,8 @@ class MarketplaceController {
       // Por ahora, retornamos un mensaje
       res.json({
         success: true,
-        message: 'Use the relayer API at port 3001 for this endpoint',
-        endpoint: 'GET http://localhost:3001/api/loans/approved'
+        message: 'Use the relayer API at port 8080 for this endpoint',
+        endpoint: 'GET http://localhost:8080/loans/approved'
       });
 
     } catch (error) {

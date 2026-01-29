@@ -100,7 +100,6 @@ router.get('/:loanId/nft', async (req, res, next) => {
       },
       links: {
         snowtrace: `https://testnet.snowtrace.io/token/${process.env.AVALANCHE_LOAN_NFT}?a=${tokenId}`,
-        marketplace: `https://testnets.opensea.io/assets/avalanche-fuji/${process.env.AVALANCHE_LOAN_NFT}/${tokenId}`
       }
     });
     

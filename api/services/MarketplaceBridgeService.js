@@ -7,19 +7,50 @@ class MarketplaceBridgeService extends BaseContractService {
   }
 
   /**
-   * Aprobar un loan para tokenización/venta
+   * ✅ Normalizar valor USD - SIEMPRE asume 2 decimales
    */
-  async approveLoanForSale(privateKey, loanId, askingPrice, modifiedInterestRate) {
+  normalizeUSD(value) {
+    if (!value && value !== 0) return 0;
+
+    let strValue = String(value).trim();
+
+    if (!strValue.includes('.')) {
+      strValue = strValue + '.00';
+    }
+
+    return parseFloat(strValue);
+  }
+
+  /**
+   * ✅ Convertir USD normalizado a centavos
+   */
+  usdToCents(usd) {
+    const normalized = this.normalizeUSD(usd);
+    return Math.round(normalized * 100);
+  }
+
+  /**
+   * ✅ Convertir centavos a USD con 2 decimales
+   */
+  centsToUSD(cents) {
+    if (!cents) return "0.00";
+    const dollars = Number(cents) / 100;
+    return dollars.toFixed(2);
+  }
+
+  /**
+   * Aprobar un loan para tokenización/venta
+   * ✅ Acepta USD y lo convierte a centavos
+   */
+  async approveLoanForSale(privateKey, loanId, askingPriceUSD, modifiedInterestRate) {
     const contract = this.getContract(privateKey);
 
-    // ✅ CAMBIO: BigInt en lugar de parseEther
-    const priceValue = typeof askingPrice === 'string'
-      ? BigInt(askingPrice)
-      : BigInt(askingPrice);
+    // ✅ Convertir USD a centavos
+    const priceInCents = this.usdToCents(askingPriceUSD);
 
     const tx = await contract.approveLoanForSale(
       loanId,
-      priceValue,
+      BigInt(priceInCents),
       modifiedInterestRate
     );
 
@@ -28,8 +59,7 @@ class MarketplaceBridgeService extends BaseContractService {
     return {
       success: true,
       loanId,
-      // ✅ CAMBIO: .toString() en lugar de formatEther
-      askingPrice: priceValue.toString(),
+      askingPrice: this.centsToUSD(priceInCents),
       modifiedInterestRate,
       txHash: receipt.hash,
       blockNumber: receipt.blockNumber,
@@ -58,11 +88,13 @@ class MarketplaceBridgeService extends BaseContractService {
   async getLoanIdByTxHash(txHash) {
     const contract = this.getContractReadOnly();
 
-    const txHashBytes32 = txHash.startsWith('0x') ? txHash : `0x${txHash}`;
+    // Asegurarse formato correcto
+    const txHashBytes32 = txHash.startsWith('0x') ? txHash : '0x' + txHash;
+
     const loanId = await contract.getLoanIdByTxHash(txHashBytes32);
 
-    if (!loanId || loanId === '') {
-      throw new Error('TxHash not found');
+    if (!loanId || loanId.trim() === '') {
+      throw new Error('TxHash not found in registry');
     }
 
     return loanId;
@@ -70,25 +102,20 @@ class MarketplaceBridgeService extends BaseContractService {
 
   async getApprovalDataByTxHash(txHash) {
     const contract = this.getContractReadOnly();
+    const txHashBytes32 = txHash.startsWith('0x') ? txHash : '0x' + txHash;
 
-    const txHashBytes32 = txHash.startsWith('0x') ? txHash : `0x${txHash}`;
     const [approval, loanId] = await contract.getApprovalDataByTxHash(txHashBytes32);
-
-    const centsToUSD = (cents) => {
-      if (!cents) return "0.00";
-      return (Number(cents) / 100).toFixed(2);
-    };
 
     return {
       loanId,
       isApproved: approval.isApproved,
-      askingPrice: centsToUSD(approval.askingPrice),
+      askingPrice: this.centsToUSD(approval.askingPrice),
       modifiedInterestRate: Number(approval.modifiedInterestRate),
       lenderAddress: approval.lenderAddress,
       approvalTimestamp: Number(approval.approvalTimestamp),
       isMinted: approval.isMinted,
       isCancelled: approval.isCancelled,
-      txHash: txHash
+      approvalTxHash: txHash
     };
   }
 
@@ -109,15 +136,26 @@ class MarketplaceBridgeService extends BaseContractService {
     const contract = this.getContractReadOnly();
     const approval = await contract.getApprovalData(loanId);
 
+    let approvalTxHash = null;
+    try {
+      const filter = contract.filters.LoanApprovedForSale(loanId);
+      const events = await contract.queryFilter(filter);
+      if (events.length > 0) {
+        approvalTxHash = events[events.length - 1].transactionHash;
+      }
+    } catch (error) {
+      console.error('Error fetching approval event:', error);
+    }
+
     return {
       isApproved: approval.isApproved,
-      // ✅ CAMBIO: .toString() en lugar de formatEther
-      askingPrice: approval.askingPrice.toString(),
+      askingPrice: this.centsToUSD(approval.askingPrice), // ✅ Convertir a USD
       modifiedInterestRate: Number(approval.modifiedInterestRate),
       lenderAddress: approval.lenderAddress,
       approvalTimestamp: Number(approval.approvalTimestamp),
       isMinted: approval.isMinted,
-      isCancelled: approval.isCancelled
+      isCancelled: approval.isCancelled,
+      approvalTxHash: approvalTxHash
     };
   }
 
@@ -152,45 +190,45 @@ class MarketplaceBridgeService extends BaseContractService {
     };
   }
 
-  async recordOwnershipTransfer(privateKey, loanId, newOwnerAddress, salePrice) {
+  async recordOwnershipTransfer(privateKey, loanId, newOwnerAddress, salePriceUSD) {
     const contract = this.getContract(privateKey);
 
-    // ✅ CAMBIO: BigInt en lugar de parseEther
-    const priceValue = typeof salePrice === 'string'
-      ? BigInt(salePrice)
-      : BigInt(salePrice);
+    // ✅ Convertir USD a centavos
+    const priceInCents = this.usdToCents(salePriceUSD);
 
-    const tx = await contract.recordOwnershipTransfer(loanId, newOwnerAddress, priceValue);
+    const tx = await contract.recordOwnershipTransfer(
+      loanId,
+      newOwnerAddress,
+      BigInt(priceInCents)
+    );
     const receipt = await tx.wait();
 
     return {
       success: true,
       loanId,
       newOwnerAddress,
-      // ✅ CAMBIO: .toString() en lugar de formatEther
-      salePrice: priceValue.toString(),
+      salePriceUSD: this.centsToUSD(priceInCents),
+      salePriceCents: priceInCents.toString(),
       txHash: receipt.hash,
       blockNumber: receipt.blockNumber,
       gasUsed: receipt.gasUsed.toString()
     };
   }
 
-  async recordPayment(privateKey, loanId, amount) {
+  async recordPayment(privateKey, loanId, amountUSD) {
     const contract = this.getContract(privateKey);
 
-    // ✅ CAMBIO: BigInt en lugar de parseEther
-    const amountValue = typeof amount === 'string'
-      ? BigInt(amount)
-      : BigInt(amount);
+    // ✅ Convertir USD a centavos
+    const amountInCents = this.usdToCents(amountUSD);
 
-    const tx = await contract.recordPayment(loanId, amountValue);
+    const tx = await contract.recordPayment(loanId, BigInt(amountInCents));
     const receipt = await tx.wait();
 
     return {
       success: true,
       loanId,
-      // ✅ CAMBIO: .toString() en lugar de formatEther
-      amount: amountValue.toString(),
+      amountUSD: this.centsToUSD(amountInCents),
+      amountCents: amountInCents.toString(),
       txHash: receipt.hash,
       blockNumber: receipt.blockNumber,
       gasUsed: receipt.gasUsed.toString()

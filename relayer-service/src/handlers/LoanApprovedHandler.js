@@ -19,22 +19,87 @@ class LoanApprovedHandler extends BaseHandler {
     this.logStart(event);
 
     try {
-      // ✅ Ahora el loanId viene como string desde BesuListener
-      const { loanId, lenderAddress, askingPrice, modifiedInterestRate } = event;
+      // Extraer campos importantes (incluyendo el txHash del evento de aprobación)
+      const {
+        loanId,
+        lenderAddress,
+        askingPrice,
+        modifiedInterestRate,
+        transactionHash   // ← Este viene del BesuListener
+      } = event;
 
-      logger.info(`Processing loan approval`, { 
-        loanId, 
+      if (!transactionHash) {
+        throw new Error('Missing transactionHash in event data');
+      }
+
+      logger.info(`Processing loan approval`, {
+        loanId,
         lender: lenderAddress,
         price: askingPrice?.toString(),
-        rate: modifiedInterestRate?.toString()
+        rate: modifiedInterestRate?.toString(),
+        approvalTxHash: transactionHash
       });
+
+      // ───────────────────────────────────────────────────────────────
+      // NUEVO: Registrar el txHash de la transacción de aprobación original
+      // Esto resuelve el error "TxHash not found" en las consultas por hash
+      const marketplaceBridge = besuService.getContract('marketplaceBridge');
+
+      try {
+        // Verificar si ya está registrado (idempotencia)
+        const existingLoanId = await marketplaceBridge.getLoanIdByTxHash(transactionHash);
+        if (existingLoanId && existingLoanId.trim() !== '') {
+          if (existingLoanId === loanId) {
+            logger.info('Approval txHash already registered (skipping)', {
+              loanId,
+              transactionHash
+            });
+          } else {
+            logger.warn('TxHash mapped to different loan (possible inconsistency)', {
+              transactionHash,
+              expected: loanId,
+              found: existingLoanId
+            });
+          }
+        } else {
+          // Registrar
+          logger.info('Registering approval txHash in MarketplaceBridge', {
+            loanId,
+            transactionHash
+          });
+
+          const registerTx = await marketplaceBridge.registerApprovalTxHash(
+            loanId,
+            transactionHash,
+            { gasLimit: 150000 } // operación simple → gas bajo
+          );
+
+          const registerReceipt = await registerTx.wait();
+
+          logger.info('Approval txHash registered successfully', {
+            loanId,
+            transactionHash,
+            registerTxHash: registerReceipt.hash,
+            blockNumber: registerReceipt.blockNumber
+          });
+        }
+      } catch (registerError) {
+        // No bloquear el mint si falla el registro (puede reintentarse después)
+        logger.warn('Failed to register approval txHash (non-blocking)', {
+          loanId,
+          transactionHash,
+          error: registerError.shortMessage || registerError.message
+        });
+        // Opcional: podrías meterlo en una cola de reintentos aquí
+      }
+      // ───────────────────────────────────────────────────────────────
 
       // Check if already minted
       const existingTokenId = stateManager.getNFTForLoan(loanId);
       if (existingTokenId) {
-        logger.warn('NFT already minted for this loan', { 
-          loanId, 
-          tokenId: existingTokenId 
+        logger.warn('NFT already minted for this loan', {
+          loanId,
+          tokenId: existingTokenId
         });
         return {
           success: false,
@@ -46,8 +111,6 @@ class LoanApprovedHandler extends BaseHandler {
       // Step 1: Fetch loan data from Besu
       logger.info(`Fetching loan data from Besu`, { loanId });
       const loanRegistry = besuService.getContract('loanRegistry');
-      
-      // ✅ Ahora loanId es el string correcto: "GM912D0006"
       const loanData = await loanRegistry.readLoan(loanId);
 
       logger.info(`Loan data fetched`, {
@@ -56,26 +119,25 @@ class LoanApprovedHandler extends BaseHandler {
         balance: loanData.CurrentPrincipalBal?.toString()
       });
 
-      // Step 2: Generar mensaje para multi-sig
+      // Step 2: Generar mensaje para multi-sig (APPROVED)
       const timestamp = Math.floor(Date.now() / 1000);
       const nonce = stateManager.getNonce(loanId);
       const location = `${loanData.BorrowerCity || 'N/A'}, ${loanData.BorrowerState || 'N/A'}`;
       const status = "ForSale";
 
-      // Step 2.1: Primero marcar el loan como aprobado en Avalanche
       logger.info('Marking loan as approved in Avalanche', { loanId });
-      
+
       const approvalMessageHash = ethers.keccak256(
         ethers.solidityPacked(
           ['string', 'string', 'uint256', 'uint256'],
           ['APPROVED', loanId, timestamp, nonce]
         )
       );
-      
+
       const approvalSignatures = await this.collectSignatures(approvalMessageHash);
-      
+
       const bridgeReceiver = avalancheService.getContract('bridgeReceiver');
-      
+
       const approvalTx = await bridgeReceiver.markLoanApprovedInBesu(
         loanId,
         timestamp,
@@ -83,91 +145,68 @@ class LoanApprovedHandler extends BaseHandler {
         approvalSignatures,
         { gasLimit: 300000 }
       );
-      
+
       await approvalTx.wait();
       logger.info('Loan marked as approved in Avalanche', { loanId });
 
       // Step 3: Generar mensaje para el minting
-      const mintNonce = stateManager.getNonce(loanId); // Nuevo nonce para el mint
+      const mintNonce = stateManager.getNonce(loanId);
       const mintTimestamp = Math.floor(Date.now() / 1000);
-      
+
       const messageHash = ethers.keccak256(
         ethers.solidityPacked(
           ['string', 'string', 'address', 'uint256', 'uint256', 'uint256', 'string', 'string', 'uint256', 'uint256', 'uint256'],
           [
-            'MINT', 
-            loanId, 
-            lenderAddress, 
-            loanData.CurrentPrincipalBal, 
-            loanData.ScheduledPayment, 
-            modifiedInterestRate, 
-            status, 
-            location, 
-            askingPrice, 
-            mintTimestamp, 
+            'MINT',
+            loanId,
+            lenderAddress,
+            loanData.CurrentPrincipalBal,
+            loanData.ScheduledPayment,
+            modifiedInterestRate,
+            status,
+            location,
+            askingPrice,
+            mintTimestamp,
             mintNonce
           ]
         )
       );
 
-      // Step 3: Recolectar firmas
-      logger.info('Collecting signatures for message hash', { 
-        messageHash,
-        loanId 
-      });
-      
+      logger.info('Collecting signatures for mint message', { messageHash, loanId });
       const signatures = await this.collectSignatures(messageHash);
-      
-      logger.info('Signatures collected', { 
-        count: signatures.length,
-        loanId 
-      });
 
-      // Step 4: Llamar processLoanApproval en BridgeReceiver
-      logger.info(`Calling processLoanApproval in Avalanche`, { 
+      logger.info('Signatures collected for mint', { count: signatures.length, loanId });
+
+      // Step 4: Mint via bridge
+      logger.info(`Calling processLoanApproval in Avalanche`, {
         loanId,
-        lenderAddress,
-        currentBalance: loanData.CurrentPrincipalBal.toString(),
-        scheduledPayment: loanData.ScheduledPayment.toString(),
-        modifiedInterestRate: modifiedInterestRate.toString(),
-        status,
-        location,
         askingPrice: askingPrice.toString(),
-        timestamp: mintTimestamp,
-        nonce: mintNonce,
         signaturesCount: signatures.length
       });
-      
+
       const tx = await bridgeReceiver.processLoanApproval(
-        loanId, 
-        lenderAddress, 
-        loanData.CurrentPrincipalBal, 
-        loanData.ScheduledPayment, 
-        modifiedInterestRate, 
-        status, 
-        location, 
-        askingPrice, 
-        mintTimestamp, 
-        mintNonce, 
+        loanId,
+        lenderAddress,
+        loanData.CurrentPrincipalBal,
+        loanData.ScheduledPayment,
+        modifiedInterestRate,
+        status,
+        location,
+        askingPrice,
+        mintTimestamp,
+        mintNonce,
         signatures,
         { gasLimit: 500000 }
       );
 
-      logger.info('Process loan approval transaction sent', {
-        txHash: tx.hash,
-        loanId
-      });
-
+      logger.info('Mint transaction sent', { txHash: tx.hash, loanId });
       const receipt = await tx.wait();
 
-      // Step 5: Extract tokenId from LoanMinted event
+      // Step 5: Extraer tokenId del evento LoanMinted
       const mintEvent = receipt.logs.find(log => {
         try {
-          const parsed = bridgeReceiver.interface.parseLog({
-            topics: log.topics,
-            data: log.data
-          });
-          return parsed && parsed.name === 'LoanMinted';
+          const parsed = bridgeReceiver.interface.parseLog(log);
+          return parsed?.name === 'LoanMinted';
         } catch {
           return false;
         }
@@ -175,37 +214,28 @@ class LoanApprovedHandler extends BaseHandler {
 
       let tokenId;
       if (mintEvent) {
-        const decodedEvent = bridgeReceiver.interface.parseLog({
-          topics: mintEvent.topics,
-          data: mintEvent.data
-        });
-        tokenId = decodedEvent.args.tokenId.toString();
+        const decoded = bridgeReceiver.interface.parseLog(mintEvent);
+        tokenId = decoded.args.tokenId.toString();
       }
 
       if (!tokenId) {
-        throw new Error('Failed to get token ID from process transaction');
+        throw new Error('Failed to extract tokenId from mint transaction');
       }
 
-      logger.info(`NFT minted successfully via bridge`, {
+      logger.info(`NFT minted successfully`, {
         loanId,
         tokenId,
-        txHash: receipt.hash,
-        blockNumber: receipt.blockNumber
+        avalancheTxHash: receipt.hash
       });
 
-      // Step 6: Record token ID back in Besu
+      // Step 6: Registrar tokenId en Besu
       try {
         logger.info(`Recording token ID in Besu`, { loanId, tokenId });
-        const marketplaceBridge = besuService.getContract('marketplaceBridge');
-        
         const besuTx = await marketplaceBridge.setAvalancheTokenId(
           loanId,
           tokenId,
-          {
-            gasLimit: 300000
-          }
+          { gasLimit: 300000 }
         );
-        
         await besuTx.wait();
         logger.info(`Token ID recorded in Besu`, { loanId, tokenId });
       } catch (error) {
@@ -216,7 +246,7 @@ class LoanApprovedHandler extends BaseHandler {
         });
       }
 
-      // Step 7: Update state manager
+      // Step 7: Actualizar estado local
       stateManager.mapLoanToNFT(loanId, tokenId);
       stateManager.incrementMetric('nftsMinted');
 
@@ -244,42 +274,42 @@ class LoanApprovedHandler extends BaseHandler {
     try {
       // Obtener las private keys de los validadores desde el .env
       const validatorKeys = [
-        process.env.VALIDATOR_PK1, 
+        process.env.VALIDATOR_PK1,
         process.env.VALIDATOR_PK2,
         process.env.VALIDATOR_PK3
       ].filter(Boolean); // Filtrar valores undefined/null
-      
+
       if (validatorKeys.length === 0) {
         throw new Error('No validator private keys configured in .env');
       }
-      
-      logger.info('Collecting signatures', { 
+
+      logger.info('Collecting signatures', {
         validatorCount: validatorKeys.length,
-        messageHash 
+        messageHash
       });
-      
+
       const signatures = [];
-      
+
       for (let i = 0; i < validatorKeys.length; i++) {
         const pk = validatorKeys[i];
         const wallet = new ethers.Wallet(pk);
         const sig = await wallet.signMessage(ethers.getBytes(messageHash));
-        
+
         logger.debug('Signature collected', {
           validator: i + 1,
           address: wallet.address,
           signature: sig
         });
-        
+
         signatures.push(sig);
       }
-      
+
       logger.info('All signatures collected successfully', {
         count: signatures.length
       });
-      
+
       return signatures;
-      
+
     } catch (error) {
       logger.error('Failed to collect signatures', {
         error: error.message,
@@ -291,7 +321,7 @@ class LoanApprovedHandler extends BaseHandler {
 
   validate(event) {
     super.validate(event);
-    
+
     if (!event.loanId) {
       throw new Error('Missing loan ID');
     }
@@ -301,7 +331,7 @@ class LoanApprovedHandler extends BaseHandler {
     if (!event.askingPrice) {
       throw new Error('Missing asking price');
     }
-    
+
     return true;
   }
 }

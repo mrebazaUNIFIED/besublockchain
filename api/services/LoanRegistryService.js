@@ -8,7 +8,33 @@ class LoanRegistryService extends BaseContractService {
   }
 
   /**
-   * Helper: Convertir centavos a USD formateado
+   * ✅ Normalizar valor USD - SIEMPRE asume 2 decimales
+   */
+  normalizeUSD(value) {
+    if (!value && value !== 0) return 0;
+    
+    // Convertir a string y limpiar
+    let strValue = String(value).trim();
+    
+    // Si NO tiene punto decimal, agregar .00
+    if (!strValue.includes('.')) {
+      strValue = strValue + '.00';
+    }
+    
+    // Parsear como float
+    return parseFloat(strValue);
+  }
+
+  /**
+   * ✅ Convertir USD normalizado a centavos
+   */
+  usdToCents(usd) {
+    const normalized = this.normalizeUSD(usd);
+    return Math.round(normalized * 100);
+  }
+
+  /**
+   * ✅ Convertir centavos a USD con 2 decimales
    */
   centsToUSD(cents) {
     if (!cents) return "0.00";
@@ -17,7 +43,7 @@ class LoanRegistryService extends BaseContractService {
   }
 
   /**
-   * Crear un loan - Números normales (centavos), NO Wei
+   * Crear un loan - Normaliza y convierte automáticamente
    */
   async createLoan(privateKey, loanData) {
     const contract = this.getContract(privateKey);
@@ -33,40 +59,41 @@ class LoanRegistryService extends BaseContractService {
       loanData.BorrowerCity,
       loanData.BorrowerEmail,
       loanData.BorrowerOccupancyStatus,
-      BigInt(loanData.CurrentPrincipalBal || 0),
-      BigInt(loanData.RestrictedFunds || 0),
-      BigInt(loanData.SuspenseBalance || 0),
-      BigInt(loanData.EscrowBalance || 0),
-      BigInt(loanData.TotalInTrust || 0),
+      // ✅ Normaliza y convierte USD → centavos
+      BigInt(this.usdToCents(loanData.CurrentPrincipalBal)),
+      BigInt(this.usdToCents(loanData.RestrictedFunds)),
+      BigInt(this.usdToCents(loanData.SuspenseBalance)),
+      BigInt(this.usdToCents(loanData.EscrowBalance)),
+      BigInt(this.usdToCents(loanData.TotalInTrust)),
       loanData.NoteRate || 0,
       loanData.SoldRate || 0,
       loanData.DefaultRate || 0,
-      BigInt(loanData.UnpaidInterest || 0),
-      BigInt(loanData.UnpaidFees || 0),
-      BigInt(loanData.LateFeesAmount || 0),
-      BigInt(loanData.UnpaidLateFees || 0),
-      BigInt(loanData.AccruedLateFees || 0),
-      BigInt(loanData.UnpaidLoanCharges || 0),
-      BigInt(loanData.DeferredPrincBalance || 0),
-      BigInt(loanData.DeferredUnpCharges || 0),
-      BigInt(loanData.OriginalLoanAmount || 0),
+      BigInt(this.usdToCents(loanData.UnpaidInterest)),
+      BigInt(this.usdToCents(loanData.UnpaidFees)),
+      BigInt(this.usdToCents(loanData.LateFeesAmount)),
+      BigInt(this.usdToCents(loanData.UnpaidLateFees)),
+      BigInt(this.usdToCents(loanData.AccruedLateFees)),
+      BigInt(this.usdToCents(loanData.UnpaidLoanCharges)),
+      BigInt(this.usdToCents(loanData.DeferredPrincBalance)),
+      BigInt(this.usdToCents(loanData.DeferredUnpCharges)),
+      BigInt(this.usdToCents(loanData.OriginalLoanAmount)),
       loanData.OriginationDate,
       loanData.NextPaymentDue,
       loanData.LoanMaturityDate,
       loanData.LastPaymentRec,
       loanData.InterestPaidTo,
-      BigInt(loanData.DeferredUnpaidInt || 0),
-      BigInt(loanData.FCIRestrictedPrincipal || 0),
-      BigInt(loanData.FCIRestrictedInterest || 0),
+      BigInt(this.usdToCents(loanData.DeferredUnpaidInt)),
+      BigInt(this.usdToCents(loanData.FCIRestrictedPrincipal)),
+      BigInt(this.usdToCents(loanData.FCIRestrictedInterest)),
       loanData.PymtGraceDays || 0,
       loanData.DaysSinceLastPymt || 0,
       loanData.NumOfPymtsDue || 0,
-      BigInt(loanData.ScheduledPayment || 0),
+      BigInt(this.usdToCents(loanData.ScheduledPayment)),
       loanData.PromisesToPay || 0,
       loanData.NFSInLast12Months || 0,
-      BigInt(loanData.DeferredLateFees || 0),
-      BigInt(loanData.InvestorRestrictedPrincipal || 0),
-      BigInt(loanData.InvestorRestrictedInterest || 0),
+      BigInt(this.usdToCents(loanData.DeferredLateFees)),
+      BigInt(this.usdToCents(loanData.InvestorRestrictedPrincipal)),
+      BigInt(this.usdToCents(loanData.InvestorRestrictedInterest)),
       loanData.Status,
       loanData.LUid
     );
@@ -99,7 +126,7 @@ class LoanRegistryService extends BaseContractService {
   }
 
   /**
-   * Actualización parcial - Números normales (centavos)
+   * Actualización parcial - Normaliza y convierte automáticamente
    */
   async updateLoanPartial(privateKey, loanId, fieldsToUpdate) {
     const exists = await this.loanExists(loanId);
@@ -111,13 +138,13 @@ class LoanRegistryService extends BaseContractService {
 
     const updateFields = {
       updateCurrentPrincipalBal: fieldsToUpdate.CurrentPrincipalBal !== undefined,
-      CurrentPrincipalBal: fieldsToUpdate.CurrentPrincipalBal
-        ? BigInt(fieldsToUpdate.CurrentPrincipalBal)
+      CurrentPrincipalBal: fieldsToUpdate.CurrentPrincipalBal !== undefined
+        ? BigInt(this.usdToCents(fieldsToUpdate.CurrentPrincipalBal))
         : BigInt(0),
 
       updateUnpaidInterest: fieldsToUpdate.UnpaidInterest !== undefined,
-      UnpaidInterest: fieldsToUpdate.UnpaidInterest
-        ? BigInt(fieldsToUpdate.UnpaidInterest)
+      UnpaidInterest: fieldsToUpdate.UnpaidInterest !== undefined
+        ? BigInt(this.usdToCents(fieldsToUpdate.UnpaidInterest))
         : BigInt(0),
 
       updateStatus: fieldsToUpdate.Status !== undefined,
@@ -136,13 +163,13 @@ class LoanRegistryService extends BaseContractService {
       NextPaymentDue: fieldsToUpdate.NextPaymentDue || '',
 
       updateUnpaidFees: fieldsToUpdate.UnpaidFees !== undefined,
-      UnpaidFees: fieldsToUpdate.UnpaidFees
-        ? BigInt(fieldsToUpdate.UnpaidFees)
+      UnpaidFees: fieldsToUpdate.UnpaidFees !== undefined
+        ? BigInt(this.usdToCents(fieldsToUpdate.UnpaidFees))
         : BigInt(0),
 
       updateLateFeesAmount: fieldsToUpdate.LateFeesAmount !== undefined,
-      LateFeesAmount: fieldsToUpdate.LateFeesAmount
-        ? BigInt(fieldsToUpdate.LateFeesAmount)
+      LateFeesAmount: fieldsToUpdate.LateFeesAmount !== undefined
+        ? BigInt(this.usdToCents(fieldsToUpdate.LateFeesAmount))
         : BigInt(0),
 
       updateNoteRate: fieldsToUpdate.NoteRate !== undefined,
@@ -297,7 +324,6 @@ class LoanRegistryService extends BaseContractService {
       BorrowerCity: loan.BorrowerCity,
       BorrowerEmail: loan.BorrowerEmail,
       BorrowerOccupancyStatus: loan.BorrowerOccupancyStatus,
-      // ✅ Convertir centavos a USD
       CurrentPrincipalBal: this.centsToUSD(loan.CurrentPrincipalBal),
       RestrictedFunds: this.centsToUSD(loan.RestrictedFunds),
       SuspenseBalance: this.centsToUSD(loan.SuspenseBalance),
@@ -396,7 +422,6 @@ class LoanRegistryService extends BaseContractService {
           BorrowerCity: loan.BorrowerCity,
           BorrowerEmail: loan.BorrowerEmail,
           BorrowerOccupancyStatus: loan.BorrowerOccupancyStatus,
-          // ✅ Convertir centavos a USD
           CurrentPrincipalBal: this.centsToUSD(loan.CurrentPrincipalBal),
           RestrictedFunds: this.centsToUSD(loan.RestrictedFunds),
           SuspenseBalance: this.centsToUSD(loan.SuspenseBalance),
@@ -500,7 +525,6 @@ class LoanRegistryService extends BaseContractService {
         BorrowerCity: loan.BorrowerCity,
         BorrowerEmail: loan.BorrowerEmail,
         BorrowerOccupancyStatus: loan.BorrowerOccupancyStatus,
-        // ✅ Convertir centavos a USD
         CurrentPrincipalBal: this.centsToUSD(loan.CurrentPrincipalBal),
         RestrictedFunds: this.centsToUSD(loan.RestrictedFunds),
         SuspenseBalance: this.centsToUSD(loan.SuspenseBalance),

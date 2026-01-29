@@ -184,7 +184,7 @@ contract MarketplaceBridge is Ownable {
         ApprovalData storage approval = loanApprovals[loanId];
 
         require(approval.isApproved, "Not approved for sale");
-        require(!approval.isMinted, "NFT already minted, cannot cancel");
+        //require(!approval.isMinted, "NFT already minted, cannot cancel");
         require(!approval.isCancelled, "Already cancelled");
 
         approval.isCancelled = true;
