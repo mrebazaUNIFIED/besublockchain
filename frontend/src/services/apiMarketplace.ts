@@ -17,7 +17,8 @@ import type {
   TokenizationStatusResponse,
   SetTokenIdResponse,
   RecordTransferResponse,
-  RecordPaymentResponse
+  RecordPaymentResponse,
+  ApprovalByTxResponse
 } from '../types/marketplaceTypes';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8070';
@@ -115,6 +116,15 @@ export const getApprovalData = async (loanId: string): Promise<LoanApprovalData>
   return response.data.data;
 };
 
+export const getApprovalByTxHash = async (
+  txHash: string
+): Promise<ApprovalByTxResponse> => {
+  const response = await api.get<ApprovalByTxResponse>(
+    `/marketplace/approval/tx/${txHash}`
+  );
+  return response.data;
+};
+
 /**
  * GET /marketplace/status/:loanId
  * Obtener estado completo de tokenización
@@ -173,6 +183,8 @@ export const marketplaceKeys = {
   all: ['marketplace'] as const,
   approval: (loanId: string) => [...marketplaceKeys.all, 'approval', loanId] as const,
   status: (loanId: string) => [...marketplaceKeys.all, 'status', loanId] as const,
+  approvalByTx: (txHash: string) => [...marketplaceKeys.all, 'approvalByTx', txHash] as const,
+
 };
 
 // ==================== REACT QUERY HOOKS ====================
@@ -185,6 +197,19 @@ export const useApprovalData = (loanId: string, enabled: boolean = true) => {
     queryKey: marketplaceKeys.approval(loanId),
     queryFn: () => getApprovalData(loanId),
     enabled: enabled && !!loanId,
+    staleTime: 1000 * 60 * 2, // 2 minutos
+    retry: 1,
+  });
+};
+
+export const useApprovalByTxHash = (
+  txHash: string,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: marketplaceKeys.approvalByTx(txHash),
+    queryFn: () => getApprovalByTxHash(txHash),
+    enabled: enabled && !!txHash,
     staleTime: 1000 * 60 * 2, // 2 minutos
     retry: 1,
   });

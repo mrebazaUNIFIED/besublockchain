@@ -9,6 +9,7 @@ import AvalancheListener from './listeners/AvalancheListener.js';
 import LoanApprovedHandler from './handlers/LoanApprovedHandler.js';
 import LoanSoldHandler from './handlers/LoanSoldHandler.js';
 import PaymentReceivedHandler from './handlers/PaymentReceivedHandler.js';
+import LoanApprovalCancelledHandler from './handlers/LoanApprovalCancelledHandler.js'; // ← NUEVO
 import { startAPIServer } from './api/server.js';
 
 dotenv.config();
@@ -35,6 +36,9 @@ async function processEvent(event) {
         switch (event.type) {
             case 'LoanApprovedForSale':
                 handler = new LoanApprovedHandler();
+                break;
+            case 'LoanApprovalCancelled': // ← NUEVO
+                handler = new LoanApprovalCancelledHandler();
                 break;
             case 'LoanSold':
                 handler = new LoanSoldHandler();

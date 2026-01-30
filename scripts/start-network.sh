@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Script para iniciar la red Besu en el orden correcto
-# Uso: ./start-network.sh
 
 echo -e "${YELLOW}⚠ Limpiando procesos Besu previos y liberando puertos...${NC}"
 

@@ -119,18 +119,6 @@ class GraphQLService {
   }
 
   /**
-   * Helper: Convertir dólares a centavos
-   */
-  toCents(value) {
-    if (!value || value === '') return 0;
-    try {
-      return Math.floor(parseFloat(value) * 100);
-    } catch {
-      return 0;
-    }
-  }
-
-  /**
    * Helper: Convertir porcentaje a basis points
    */
   toBasisPoints(percentage) {
@@ -149,7 +137,7 @@ class GraphQLService {
     return value ? String(value) : defaultValue;
   }
 
-  /**
+  /** 
    * Helper: Safe int
    */
   safeInt(value, defaultValue = 0) {
@@ -163,8 +151,10 @@ class GraphQLService {
 
   /**
    * Mapear datos de GraphQL a formato del contrato
+   * → TODOS los montos se pasan en DÓLARES (el LoanRegistryService los convierte a centavos)
    */
   mapLoanData(portfolioLoan, dashboardInfo, userId) {
+
     return {
       ID: this.safeStr(portfolioLoan.loanAccount),
       UserID: userId,
@@ -182,28 +172,28 @@ class GraphQLService {
       BorrowerZip: this.safeStr(dashboardInfo.propertyZip),
       BorrowerOccupancyStatus: this.safeStr(dashboardInfo.propertyOccupancyEnum),
 
-      // Financial values (centavos)
-      CurrentPrincipalBal: this.toCents(dashboardInfo.currentPrincipalBalance),
-      RestrictedFunds: this.toCents(dashboardInfo.restrictedFunds),
-      SuspenseBalance: this.toCents(dashboardInfo.suspenseBalance),
-      EscrowBalance: this.toCents(dashboardInfo.escrowBalance),
-      TotalInTrust: this.toCents(dashboardInfo.totalInTrust),
+      // Financial values → EN DÓLARES (sin convertir aquí)
+      CurrentPrincipalBal: Number(dashboardInfo.currentPrincipalBalance || 0),
+      RestrictedFunds: Number(dashboardInfo.restrictedFunds || 0),
+      SuspenseBalance: Number(dashboardInfo.suspenseBalance || 0),
+      EscrowBalance: Number(dashboardInfo.escrowBalance || 0),
+      TotalInTrust: Number(dashboardInfo.totalInTrust || 0),
 
       // Rates (basis points)
       NoteRate: this.toBasisPoints(dashboardInfo.noteRate),
       SoldRate: this.toBasisPoints(dashboardInfo.soldRate),
       DefaultRate: this.toBasisPoints(dashboardInfo.defaultRate),
 
-      // More financial values
-      UnpaidInterest: this.toCents(dashboardInfo.unpaidInterest),
-      UnpaidFees: this.toCents(dashboardInfo.unpaidFees),
-      LateFeesAmount: this.toCents(dashboardInfo.lateFeesAmount),
-      UnpaidLateFees: this.toCents(dashboardInfo.unpaidLateFees),
-      AccruedLateFees: this.toCents(dashboardInfo.accruedLateFees),
-      UnpaidLoanCharges: this.toCents(dashboardInfo.unpaidLoanCharges),
-      DeferredPrincBalance: this.toCents(dashboardInfo.deferredPrinBalance),
-      DeferredUnpCharges: this.toCents(dashboardInfo.deferredUnpaidCharges),
-      OriginalLoanAmount: this.toCents(dashboardInfo.originalLoanAmount),
+      // More financial values → EN DÓLARES
+      UnpaidInterest: Number(dashboardInfo.unpaidInterest || 0),
+      UnpaidFees: Number(dashboardInfo.unpaidFees || 0),
+      LateFeesAmount: Number(dashboardInfo.lateFeesAmount || 0),
+      UnpaidLateFees: Number(dashboardInfo.unpaidLateFees || 0),
+      AccruedLateFees: Number(dashboardInfo.accruedLateFees || 0),
+      UnpaidLoanCharges: Number(dashboardInfo.unpaidLoanCharges || 0),
+      DeferredPrincBalance: Number(dashboardInfo.deferredPrinBalance || 0),
+      DeferredUnpCharges: Number(dashboardInfo.deferredUnpaidCharges || 0),
+      OriginalLoanAmount: Number(dashboardInfo.originalLoanAmount || 0),
 
       // Dates
       OriginationDate: this.safeStr(dashboardInfo.originationDate),
@@ -212,16 +202,16 @@ class GraphQLService {
       LastPaymentRec: this.safeStr(dashboardInfo.lastPaymentRec),
       InterestPaidTo: this.safeStr(dashboardInfo.interestPaidTo),
 
-      // Other fields
-      DeferredUnpaidInt: this.toCents(dashboardInfo.deferredUnpaidInt),
-      FCIRestrictedPrincipal: this.toCents(dashboardInfo.fCIRestrictedPrincipal),
-      FCIRestrictedInterest: this.toCents(dashboardInfo.fCIRestrictedInterest),
+      // Other fields → EN DÓLARES
+      DeferredUnpaidInt: Number(dashboardInfo.deferredUnpaidInt || 0),
+      FCIRestrictedPrincipal: Number(dashboardInfo.fCIRestrictedPrincipal || 0),
+      FCIRestrictedInterest: Number(dashboardInfo.fCIRestrictedInterest || 0),
 
       // Integers
       PymtGraceDays: this.safeInt(dashboardInfo.pymntGraceDays),
       DaysSinceLastPymt: this.safeInt(dashboardInfo.daysSinceLastPymnt),
       NumOfPymtsDue: this.safeInt(dashboardInfo.numPymntsDue),
-      ScheduledPayment: this.toCents(dashboardInfo.scheduledPymnt),
+      ScheduledPayment: Number(dashboardInfo.scheduledPymnt || 0),
       PromisesToPay: this.safeInt(dashboardInfo.promisesToPay),
       NFSInLast12Months: this.safeInt(dashboardInfo.nSFLast12Months),
 

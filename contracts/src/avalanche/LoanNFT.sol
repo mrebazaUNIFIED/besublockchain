@@ -47,6 +47,15 @@ contract LoanNFT is ERC721, Ownable {
         uint256 timestamp
     );
 
+    // ✅ NUEVO: Evento para tracking de askingPrice
+    event AskingPriceUpdated(
+        uint256 indexed tokenId,
+        string loanId,
+        uint256 oldPrice,
+        uint256 newPrice,
+        uint256 timestamp
+    );
+
     constructor(address initialOwner) 
         ERC721("FCI Loan", "FCILOAN") 
         Ownable(initialOwner) 
@@ -121,6 +130,57 @@ contract LoanNFT is ERC721, Ownable {
         loanMetadata[tokenId].currentBalance = newBalance;
         loanMetadata[tokenId].status = newStatus;
         loanMetadata[tokenId].lastUpdated = block.timestamp;
+
+        emit MetadataUpdated(
+            tokenId,
+            tokenIdToLoanId[tokenId],
+            newBalance,
+            newStatus,
+            block.timestamp
+        );
+    }
+
+    // ✅ NUEVO: Actualizar asking price (para cancelaciones de venta)
+    function updateAskingPrice(
+        uint256 tokenId,
+        uint256 newAskingPrice
+    ) external onlyBridge {
+        require(_ownerOf(tokenId) != address(0), "Token does not exist");
+
+        uint256 oldPrice = loanMetadata[tokenId].askingPrice;
+        loanMetadata[tokenId].askingPrice = newAskingPrice;
+        loanMetadata[tokenId].lastUpdated = block.timestamp;
+
+        emit AskingPriceUpdated(
+            tokenId,
+            tokenIdToLoanId[tokenId],
+            oldPrice,
+            newAskingPrice,
+            block.timestamp
+        );
+    }
+
+    // ✅ NUEVO: Actualizar metadata completa (más flexible)
+    function updateFullMetadata(
+        uint256 tokenId,
+        uint256 newBalance,
+        uint256 newMonthlyPayment,
+        uint256 newInterestRate,
+        string memory newStatus,
+        string memory newLocation,
+        uint256 newAskingPrice
+    ) external onlyBridge {
+        require(_ownerOf(tokenId) != address(0), "Token does not exist");
+
+        LoanMetadata storage metadata = loanMetadata[tokenId];
+        
+        metadata.currentBalance = newBalance;
+        metadata.monthlyPayment = newMonthlyPayment;
+        metadata.interestRate = newInterestRate;
+        metadata.status = newStatus;
+        metadata.location = newLocation;
+        metadata.askingPrice = newAskingPrice;
+        metadata.lastUpdated = block.timestamp;
 
         emit MetadataUpdated(
             tokenId,

@@ -7,37 +7,35 @@ class LoanRegistryService extends BaseContractService {
     super('LoanRegistry', 'LoanRegistry');
   }
 
-  /**
-   * ✅ Normalizar valor USD - SIEMPRE asume 2 decimales
-   */
-  normalizeUSD(value) {
-    if (!value && value !== 0) return 0;
-    
-    // Convertir a string y limpiar
-    let strValue = String(value).trim();
-    
-    // Si NO tiene punto decimal, agregar .00
-    if (!strValue.includes('.')) {
-      strValue = strValue + '.00';
-    }
-    
-    // Parsear como float
-    return parseFloat(strValue);
-  }
+
 
   /**
-   * ✅ Convertir USD normalizado a centavos
+   * ✅ Convertir USD a centavos - Multiplica por 100
    */
   usdToCents(usd) {
-    const normalized = this.normalizeUSD(usd);
-    return Math.round(normalized * 100);
+    if (usd == null || usd === '') return 0;
+
+    const original = usd;
+    const num = Number(usd);
+
+    if (isNaN(num)) {
+      console.warn(`toCents: valor inválido → ${original} (tipo: ${typeof usd})`);
+      return 0;
+    }
+
+    const result = Math.round(num * 100);
+
+    // Log solo si quieres ser muy detallista (puede ser ruidoso)
+    console.log(`toCents: ${original} → ${num} dólares → ${result} centavos`);
+
+    return result;
   }
 
   /**
    * ✅ Convertir centavos a USD con 2 decimales
    */
   centsToUSD(cents) {
-    if (!cents) return "0.00";
+    if (!cents && cents !== 0) return "0.00";
     const dollars = Number(cents) / 100;
     return dollars.toFixed(2);
   }
@@ -244,6 +242,12 @@ class LoanRegistryService extends BaseContractService {
     const loan = await contract.readLoan(loanId, {
       gasLimit: 100000000
     });
+
+    console.log('[DEBUG readLoan] CurrentPrincipalBal crudo del contrato:', loan.CurrentPrincipalBal.toString());
+
+    const converted = this.centsToUSD(loan.CurrentPrincipalBal);
+    console.log('[DEBUG readLoan] Convertido a USD:', converted);
+
 
     return {
       ID: loan.ID,

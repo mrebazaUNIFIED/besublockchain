@@ -12,7 +12,7 @@ p2p-port=30310
 max-peers=25
 
 # Bootnodes
-bootnodes=["enode://2b537a3522b70de0fa139e6dacc7c727cf6aa5ecb86a07c86abcc2bde7efc85f9ef66d947c61bfddd8247b74ae53711c2f5bf8dfe17c269b6d72b53b16595963@127.0.0.1:30303"]
+bootnodes=["enode://098fa5f408c937a199f0bbd3e765a01266fe6e7c79617fa951d8c3b9fea2ae63058e21397e94b509a5bd533e14ac4b238beb49b990b7aa042a37a74641abcdbd@127.0.0.1:30303"]
 
 # Discovery
 discovery-enabled=true

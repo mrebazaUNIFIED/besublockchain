@@ -71,8 +71,37 @@ class BesuListener {
         });
       });
 
+      // ✅ NUEVO: Listen to LoanApprovalCancelled
+      this.contract.on('LoanApprovalCancelled', async (
+        loanIdHash,
+        lenderAddress,
+        timestamp,
+        event
+      ) => {
+        // Obtener el loanId real de la transacción
+        const loanId = await this._getLoanIdFromTransaction(event.log.transactionHash);
+        
+        logger.info('LoanApprovalCancelled event detected', {
+          loanId,
+          loanIdHash,
+          lenderAddress,
+          txHash: event.log.transactionHash
+        });
+        
+        await this._handleEvent('LoanApprovalCancelled', {
+          loanId,
+          loanIdHash,
+          lenderAddress,
+          timestamp: timestamp.toString(),
+          transactionHash: event.log.transactionHash,
+          blockNumber: event.log.blockNumber,
+          logIndex: event.log.index
+        });
+      });
+
       this.isListening = true;
       logger.info('Besu event listener started successfully');
+      logger.info('Listening to events: LoanApprovedForSale, PaymentRecorded, LoanApprovalCancelled');
 
       this._startSyncStateUpdater();
 
@@ -101,7 +130,7 @@ class BesuListener {
         value: tx.value
       });
 
-      // El primer parámetro de approveLoanForSale es el loanId
+      // El primer parámetro de approveLoanForSale/cancelSaleListing/recordPayment es el loanId
       const loanId = decodedData.args[0];
       
       logger.debug('Decoded loanId from transaction', {

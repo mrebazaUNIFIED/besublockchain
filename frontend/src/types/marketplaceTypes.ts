@@ -158,3 +158,12 @@ export interface RecordPaymentResponse {
     gasUsed: string;
   };
 }
+
+export interface ApprovalByTxResponse {
+  success: boolean;
+  approval: LoanApprovalData & {
+    loanId: string;
+    approvalTxHash: string;
+  };
+  txHash: string;
+}
